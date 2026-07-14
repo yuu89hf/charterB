@@ -91,19 +91,13 @@ class CertificateController extends Controller
         $originalWidth  = $baseImage->width();
         $originalHeight = $baseImage->height();
 
-        if ($resolutionScale !== 100.0) {
-            $outputWidth  = max(100, (int) round($originalWidth * ($resolutionScale / 100)));
-            $baseImage    = $baseImage->scale(width: $outputWidth);
-            $originalWidth  = $baseImage->width();
-            $originalHeight = $baseImage->height();
-        }
-
         $x = (int) (($percentX / 100) * $originalWidth);
         $y = (int) (($percentY / 100) * $originalHeight);
 
         $fontPath        = $this->resolveFontPath();
         $baseFontSize    = $this->calculateBaseFontSize($originalWidth);
         $requestedSize   = (int) round($baseFontSize * ($fontScale / 100));
+        $outputWidth     = max(100, (int) round($originalWidth * ($resolutionScale / 100)));
 
         // ─── Buat file ZIP di folder temp sistem ─────────────────────────────
         $zipName = 'sertifikat_' . time() . '.zip';
@@ -146,6 +140,10 @@ class CertificateController extends Controller
                 $font->color('#000000');
                 $font->align('center', 'center');
             });
+
+            if ($resolutionScale !== 100.0) {
+                $image = $image->scale(width: $outputWidth);
+            }
 
             // Nama file di dalam ZIP = nama dari CSV (spasi → underscore, karakter aneh dihapus)
             $safeName = preg_replace('/[^A-Za-z0-9\-]/', '_', $name);

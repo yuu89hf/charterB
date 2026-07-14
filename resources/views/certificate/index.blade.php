@@ -143,7 +143,7 @@
                                     <span>300%</span>
                                 </div>
                                 <p class="text-xs text-gray-500 mt-2">
-                                    Ubah ukuran gambar output. 100% = resolusi asli template. Font ikut menyesuaikan proporsional.
+                                    Kecilkan resolusi pixel agar file lebih ringan (mis. 2MB → ~500KB). Tidak mengubah posisi atau ukuran font di preview.
                                 </p>
                                 <p id="resolution-info" class="text-xs text-gray-400 mt-1 hidden"></p>
                             </div>
@@ -221,38 +221,37 @@
             return Math.max(12, Math.round(width * 0.04));
         }
 
-        function getOutputFontSize() {
-            const { width } = getOutputDimensions();
-            if (!width) return 16;
+        function getDesignFontSize() {
+            if (!imageNaturalWidth) return 16;
             const scale = parseInt(fontScaleInput.value, 10) / 100;
-            return Math.round(calculateBaseFontSize(width) * scale);
+            return Math.round(calculateBaseFontSize(imageNaturalWidth) * scale);
         }
 
-        function updateOutputInfo() {
+        function updateResolutionInfo() {
             if (!imageNaturalWidth) return;
 
             const { width, height } = getOutputDimensions();
-            const outputSize = getOutputFontSize();
-            const resPercent = resolutionScaleInput.value;
-
-            resolutionScaleLabel.textContent = resPercent + '%';
+            resolutionScaleLabel.textContent = resolutionScaleInput.value + '%';
             resolutionInfo.textContent = 'Resolusi output: ' + width + ' × ' + height + 'px (asli ' + imageNaturalWidth + ' × ' + imageNaturalHeight + 'px)';
             resolutionInfo.classList.remove('hidden');
+        }
 
+        function updateFontPreview() {
+            if (!imageNaturalWidth || !previewImg.clientWidth) return;
+
+            const designSize = getDesignFontSize();
+            const displayScale = previewImg.clientWidth / imageNaturalWidth;
+            const previewSize = Math.max(8, Math.round(designSize * displayScale));
+
+            dragItem.style.fontSize = previewSize + 'px';
             fontScaleLabel.textContent = fontScaleInput.value + '%';
-            fontSizeInfo.textContent = 'Ukuran font output: ' + outputSize + 'px';
+            fontSizeInfo.textContent = 'Ukuran font: ' + designSize + 'px (pada resolusi asli)';
             fontSizeInfo.classList.remove('hidden');
         }
 
-        function updatePreviewFontSize() {
-            if (!imageNaturalWidth || !previewImg.clientWidth) return;
-
-            const outputSize = getOutputFontSize();
-            const displayScale = previewImg.clientWidth / imageNaturalWidth;
-            const previewSize = Math.max(8, Math.round(outputSize * displayScale));
-
-            dragItem.style.fontSize = previewSize + 'px';
-            updateOutputInfo();
+        function updatePreview() {
+            updateFontPreview();
+            updateResolutionInfo();
         }
 
         function positionTextAtCenter() {
@@ -281,7 +280,7 @@
                         document.getElementById('canvas-container').classList.remove('hidden');
                         document.getElementById('placeholder-text').classList.add('hidden');
                         positionTextAtCenter();
-                        updatePreviewFontSize();
+                        updatePreview();
                     };
                     previewImg.src = event.target.result;
                 };
@@ -289,11 +288,11 @@
             }
         });
 
-        fontScaleInput.addEventListener('input', updatePreviewFontSize);
-        resolutionScaleInput.addEventListener('input', updatePreviewFontSize);
+        fontScaleInput.addEventListener('input', updateFontPreview);
+        resolutionScaleInput.addEventListener('input', updateResolutionInfo);
 
-        window.addEventListener('resize', updatePreviewFontSize);
-        previewImg.addEventListener('load', updatePreviewFontSize);
+        window.addEventListener('resize', updateFontPreview);
+        previewImg.addEventListener('load', updatePreview);
 
         let isDragging = false;
         dragItem.addEventListener('mousedown', () => { isDragging = true; dragItem.style.zIndex = 100; });
