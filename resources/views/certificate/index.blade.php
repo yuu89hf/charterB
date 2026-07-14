@@ -325,67 +325,37 @@
             hGuide.classList.add('hidden');
         });
 
-        // ── CSV preview: hitung jumlah nama di kolom A & deteksi duplikat ───────────────────────
+        // ── CSV preview: hitung jumlah nama di kolom A ───────────────────────
         document.getElementById('csv-upload').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
-            
             const reader = new FileReader();
             reader.onload = function(ev) {
-                const lines = ev.target.result.split(/\r?\n/);
+                const lines  = ev.target.result.split(/\r?\n/);
                 const skipWords = ['nama','name','no','no.','nomor','number'];
-                
-                // 1. Deteksi otomatis delimiter (koma atau titik koma)
-                let delimiter = ',';
-                if (lines.length > 0) {
-                    const firstLine = lines[0];
-                    if ((firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length) {
-                        delimiter = ';';
-                    }
-                }
-
-                let nameList = [];
-                let duplicateList = [];
-
+                let count = 0;
                 lines.forEach((line, idx) => {
-                    let cell = line.split(delimiter)[0];
+                    const cell = line.split(',')[0].trim();
                     if (!cell) return;
-                    
-                    // Bersihkan spasi dan karakter aneh / BOM tersembunyi khas Excel
-                    cell = cell.trim().replace(/[\x00-\x1F\x7F-\xFF]/g, '');
-                    if (cell === '') return;
-
-                    // Skip baris pertama jika berupa header
-                    if (idx === 0 && skipWords.includes(cell.toLowerCase())) return;
-
-                    // Cek Duplikat
-                    if (nameList.includes(cell)) {
-                        if (!duplicateList.includes(cell)) {
-                            duplicateList.push(cell);
-                        }
-                    } else {
-                        nameList.push(cell);
-                    }
+                    if (idx === 0 && skipWords.includes(cell.toLowerCase())) return; // skip header
+                    count++;
                 });
-
                 const info = document.getElementById('csv-info');
                 const countEl = document.getElementById('csv-count');
-                
-                if (nameList.length > 0) {
-                    let statusText = '✅ Terdeteksi ' + nameList.length + ' nama unik di kolom A.';
-                    
-                    // Jika ada duplikat, tambahkan peringatan teks di bawahnya
-                    if (duplicateList.length > 0) {
-                        statusText += '<br><span style="color: #ef4444; font-weight: bold;">⚠️ Perhatian! Ada ' + duplicateList.length + ' nama duplikat yang diabaikan: [' + duplicateList.join(', ') + ']</span>';
-                    }
-
-                    countEl.innerHTML = statusText;
+                if (count > 0) {
+                    countEl.textContent = '✅ Terdeteksi ' + count + ' nama di kolom A';
                     info.classList.remove('hidden');
-                    document.getElementById('loading-count').textContent = 'Total: ' + nameList.length + ' sertifikat akan di-generate';
+                    document.getElementById('loading-count').textContent = 'Total: ' + count + ' sertifikat akan di-generate';
 
-                    // Set preview nama pertama
-                    if (nameList.length > 0) {
-                        previewNameText.textContent = nameList[0];
+                    const firstLine = lines.find((line, idx) => {
+                        const cell = line.split(',')[0].trim();
+                        if (!cell) return false;
+                        if (idx === 0 && skipWords.includes(cell.toLowerCase())) return false;
+                        return true;
+                    });
+                    if (firstLine) {
+                        firstCsvName = firstLine.split(',')[0].trim();
+                        previewNameText.textContent = firstCsvName;
                     }
                 } else {
                     countEl.textContent = '⚠️ Tidak ada nama terdeteksi di kolom A';
