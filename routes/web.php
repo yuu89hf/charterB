@@ -17,10 +17,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('dashboard');
 
     // Route untuk menampilkan halaman upload piagam
-    Route::get('/piagam', [CertificateController::class, 'index'])->name('piagam.index');
+    Route::get('/certificate', [CertificateController::class, 'index'])->name('certificate.index');
 
     // Route untuk memproses upload dan generate piagam
-    Route::post('/piagam/generate', [CertificateController::class, 'generate'])->name('piagam.generate');
+    Route::post('/certificate/generate', [CertificateController::class, 'generate'])->name('certificate.generate');
 });
 
 // Route untuk profile
