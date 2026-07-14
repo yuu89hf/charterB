@@ -37,8 +37,9 @@
                 <div id="canvas-container" class="relative shadow-2xl bg-white hidden">
                     <img id="preview-img" src="#" alt="Preview" class="max-w-full max-h-[70vh]">
                     
-                    <div id="draggable-name" class="absolute cursor-move px-4 py-2 bg-blue-500/20 border-2 border-blue-500 text-blue-700 font-bold whitespace-nowrap select-none" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">
-                        Nama Penerima (X: <span id="coord-x">50%</span>, Y: <span id="coord-y">50%</span>)
+                    <div id="draggable-name" class="absolute cursor-move px-2 py-1 bg-blue-500/20 border-2 border-blue-500 text-blue-700 font-bold whitespace-nowrap select-none" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                        <span id="preview-name-text">Nama Penerima</span>
+                        <span class="block text-xs font-normal opacity-75">X: <span id="coord-x">50%</span>, Y: <span id="coord-y">50%</span></span>
                     </div>
                 </div>
 
@@ -111,6 +112,24 @@
 
                             <hr class="my-6 border-gray-200">
 
+                            <div class="mb-6">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    3. Ukuran Font
+                                    <span id="font-scale-label" class="text-blue-600 font-bold">100%</span>
+                                </label>
+                                <input type="range" name="font_scale" id="font-scale" min="25" max="300" value="100" step="5"
+                                    class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                                <div class="flex justify-between text-xs text-gray-400 mt-1">
+                                    <span>25%</span>
+                                    <span>100%</span>
+                                    <span>300%</span>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-2">
+                                    Ukuran dasar menyesuaikan resolusi template. Geser untuk memperkecil/memperbesar. Teks otomatis mengecil jika berisiko terpotong.
+                                </p>
+                                <p id="font-size-info" class="text-xs text-gray-400 mt-1 hidden"></p>
+                            </div>
+
                             <input type="hidden" name="x_pos" id="input-x" value="50">
                             <input type="hidden" name="y_pos" id="input-y" value="50">
                             <input type="hidden" name="progress_id" id="input-progress-id" value="">
@@ -155,19 +174,74 @@
         const previewImg = document.getElementById('preview-img');
         const vGuide   = document.getElementById('v-guide');
         const hGuide   = document.getElementById('h-guide');
+        const fontScaleInput = document.getElementById('font-scale');
+        const fontScaleLabel = document.getElementById('font-scale-label');
+        const fontSizeInfo = document.getElementById('font-size-info');
+        const previewNameText = document.getElementById('preview-name-text');
+
+        let imageNaturalWidth = 0;
+        let firstCsvName = 'Nama Penerima';
+
+        function calculateBaseFontSize(width) {
+            return Math.max(12, Math.round(width * 0.04));
+        }
+
+        function getOutputFontSize() {
+            if (!imageNaturalWidth) return 16;
+            const scale = parseInt(fontScaleInput.value, 10) / 100;
+            return Math.round(calculateBaseFontSize(imageNaturalWidth) * scale);
+        }
+
+        function updatePreviewFontSize() {
+            if (!imageNaturalWidth || !previewImg.clientWidth) return;
+
+            const outputSize = getOutputFontSize();
+            const displayScale = previewImg.clientWidth / imageNaturalWidth;
+            const previewSize = Math.max(8, Math.round(outputSize * displayScale));
+
+            dragItem.style.fontSize = previewSize + 'px';
+            fontScaleLabel.textContent = fontScaleInput.value + '%';
+            fontSizeInfo.textContent = 'Ukuran output: ' + outputSize + 'px (pada resolusi asli ' + imageNaturalWidth + 'px)';
+            fontSizeInfo.classList.remove('hidden');
+        }
+
+        function positionTextAtCenter() {
+            const rect = container.getBoundingClientRect();
+            const x = rect.width / 2;
+            const y = rect.height / 2;
+
+            dragItem.style.left = x + 'px';
+            dragItem.style.top = y + 'px';
+            dragItem.style.transform = 'translate(-50%, -50%)';
+
+            document.getElementById('coord-x').innerText = '50%';
+            document.getElementById('coord-y').innerText = '50%';
+            document.getElementById('input-x').value = '50';
+            document.getElementById('input-y').value = '50';
+        }
 
         imgUpload.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(event) {
+                    previewImg.onload = function() {
+                        imageNaturalWidth = previewImg.naturalWidth;
+                        document.getElementById('canvas-container').classList.remove('hidden');
+                        document.getElementById('placeholder-text').classList.add('hidden');
+                        positionTextAtCenter();
+                        updatePreviewFontSize();
+                    };
                     previewImg.src = event.target.result;
-                    document.getElementById('canvas-container').classList.remove('hidden');
-                    document.getElementById('placeholder-text').classList.add('hidden');
                 };
                 reader.readAsDataURL(file);
             }
         });
+
+        fontScaleInput.addEventListener('input', updatePreviewFontSize);
+
+        window.addEventListener('resize', updatePreviewFontSize);
+        previewImg.addEventListener('load', updatePreviewFontSize);
 
         let isDragging = false;
         dragItem.addEventListener('mousedown', () => { isDragging = true; dragItem.style.zIndex = 100; });
@@ -184,6 +258,7 @@
 
             dragItem.style.left = x + 'px';
             dragItem.style.top  = y + 'px';
+            dragItem.style.transform = 'translate(-50%, -50%)';
 
             const px = ((x / rect.width)  * 100).toFixed(2);
             const py = ((y / rect.height) * 100).toFixed(2);
@@ -219,8 +294,18 @@
                 if (count > 0) {
                     countEl.textContent = '✅ Terdeteksi ' + count + ' nama di kolom A';
                     info.classList.remove('hidden');
-                    // Update loading overlay text
                     document.getElementById('loading-count').textContent = 'Total: ' + count + ' sertifikat akan di-generate';
+
+                    const firstLine = lines.find((line, idx) => {
+                        const cell = line.split(',')[0].trim();
+                        if (!cell) return false;
+                        if (idx === 0 && skipWords.includes(cell.toLowerCase())) return false;
+                        return true;
+                    });
+                    if (firstLine) {
+                        firstCsvName = firstLine.split(',')[0].trim();
+                        previewNameText.textContent = firstCsvName;
+                    }
                 } else {
                     countEl.textContent = '⚠️ Tidak ada nama terdeteksi di kolom A';
                     info.classList.remove('hidden');

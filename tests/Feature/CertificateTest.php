@@ -36,17 +36,19 @@ test('user dapat mengunggah template dan csv untuk menghasilkan zip sertifikat',
     $csvContent = "Nama\nWeixi\nLingyin\nJane Doe";
     $csvFile = UploadedFile::fake()->createWithContent('names.csv', $csvContent);
 
-    // KIRIM REQUEST DENGAN PARAMETER 'format' => 'png' (atau 'pdf'/'jpg')
     $response = $this->actingAs($user)
-        ->post(route('certificate.generate'), [
+        ->postJson(route('certificate.generate'), [
             'template' => $template,
             'csv_file' => $csvFile,
             'x_pos' => 50,
             'y_pos' => 50,
-            'format' => 'png', // <-- WAJIB ADA BIAR TIDAK GAGAL VALIDASI!
+            'format' => 'png',
+            'font_scale' => 100,
         ]);
 
-    // Memastikan response sukses (200 OK) dan mengembalikan file ZIP
     $response->assertStatus(200);
-    $response->assertHeader('content-type', 'application/zip');
+    $response->assertJson([
+        'success' => true,
+    ]);
+    $response->assertJsonStructure(['download_url']);
 });

@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Cookie;
 use ZipArchive;
 
@@ -23,19 +22,21 @@ class CertificateController extends Controller
         ini_set('memory_limit', '512M');
 
         $request->validate([
-            'template'  => 'required|image|mimes:png,jpg,jpeg,webp,gif,bmp',
-            'csv_file'  => 'required|file|mimes:csv,txt',
-            'x_pos'     => 'required|numeric',
-            'y_pos'     => 'required|numeric',
-            'format'    => 'required|in:png,jpg,pdf',
+            'template'   => 'required|image|mimes:png,jpg,jpeg,webp,gif,bmp',
+            'csv_file'   => 'required|file|mimes:csv,txt',
+            'x_pos'      => 'required|numeric',
+            'y_pos'      => 'required|numeric',
+            'format'     => 'required|in:png,jpg',
+            'font_scale' => 'required|numeric|min:25|max:300',
         ]);
 
         $template = $request->file('template');
         $csvFile  = $request->file('csv_file');
 
-        $percentX = (float) $request->input('x_pos');
-        $percentY = (float) $request->input('y_pos');
-        $format   = $request->input('format', 'png');
+        $percentX   = (float) $request->input('x_pos');
+        $percentY   = (float) $request->input('y_pos');
+        $format     = $request->input('format', 'png');
+        $fontScale  = (float) $request->input('font_scale', 100);
 
         // ─── Baca CSV (Kolom A) ──────────────────────────────────────────────
         // Auto-skip baris pertama jika isinya "nama", "name", atau "no" (header)
@@ -91,7 +92,9 @@ class CertificateController extends Controller
         $x = (int) (($percentX / 100) * $originalWidth);
         $y = (int) (($percentY / 100) * $originalHeight);
 
-        $fontPath = public_path('fonts/Roboto-Bold.ttf');
+        $fontPath        = $this->resolveFontPath();
+        $baseFontSize    = $this->calculateBaseFontSize($originalWidth);
+        $requestedSize   = (int) round($baseFontSize * ($fontScale / 100));
 
         // ─── Buat file ZIP di folder temp sistem ─────────────────────────────
         $zipName = 'sertifikat_' . time() . '.zip';
@@ -118,9 +121,19 @@ class CertificateController extends Controller
             // Gunakan clone daripada decode berkali-kali (optimasi kecepatan utama!)
             $image = clone $baseImage;
 
-            $image->text($name, $x, $y, function ($font) use ($fontPath) {
-                $font->file(file_exists($fontPath) ? $fontPath : 'C:\\Windows\\Fonts\\arial.ttf');
-                $font->size(64);
+            $fontSize = $this->fitFontSize(
+                $requestedSize,
+                $name,
+                $fontPath,
+                $x,
+                $y,
+                $originalWidth,
+                $originalHeight
+            );
+
+            $image->text($name, $x, $y, function ($font) use ($fontPath, $fontSize) {
+                $font->file($fontPath);
+                $font->size($fontSize);
                 $font->color('#000000');
                 $font->align('center', 'center');
             });
@@ -134,26 +147,7 @@ class CertificateController extends Controller
                 $safeName = 'sertifikat_' . bin2hex(random_bytes(4));
             }
 
-            if ($format === 'pdf') {
-                // Simpan gambar sementara ke disk untuk dibaca Dompdf (jauh lebih cepat daripada base64)
-                $tempImagePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'temp_cert_' . uniqid() . '.png';
-                $image->save($tempImagePath);
-
-                $pdf = Pdf::loadHTML("
-                    <html>
-                    <body style='margin:0;padding:0;text-align:center;background:#fff;'>
-                        <img src='{$tempImagePath}' style='width:100%;height:auto;display:block;' />
-                    </body>
-                    </html>
-                ")->setPaper('A4', 'landscape');
-
-                $zip->addFromString($safeName . '.pdf', $pdf->output());
-
-                // Hapus file temp setelah selesai
-                if (file_exists($tempImagePath)) {
-                    unlink($tempImagePath);
-                }
-            } elseif ($format === 'jpg') {
+            if ($format === 'jpg') {
                 $encodedImage = $image->encodeUsingFileExtension('jpg');
                 $zip->addFromString($safeName . '.jpg', (string) $encodedImage);
             } else {
@@ -168,7 +162,7 @@ class CertificateController extends Controller
             }
 
             // Bebaskan memori tiap iterasi agar tidak OOM untuk 100+ file
-            unset($image, $encodedImage, $pdf, $tempImagePath);
+            unset($image, $encodedImage);
         }
 
         $zip->close();
@@ -203,5 +197,72 @@ class CertificateController extends Controller
         Cookie::queue('download_started', 'true', 1, '/', null, false, false);
 
         return response()->download($zipPath, $file)->deleteFileAfterSend(true);
+    }
+
+    private function resolveFontPath(): string
+    {
+        $customFont = public_path('fonts/Roboto-Bold.ttf');
+        if (file_exists($customFont)) {
+            return $customFont;
+        }
+
+        if (PHP_OS_FAMILY === 'Windows') {
+            return 'C:\\Windows\\Fonts\\arial.ttf';
+        }
+
+        $linuxFonts = [
+            '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+            '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
+        ];
+
+        foreach ($linuxFonts as $path) {
+            if (file_exists($path)) {
+                return $path;
+            }
+        }
+
+        return $customFont;
+    }
+
+    private function calculateBaseFontSize(int $imageWidth): int
+    {
+        // 4% lebar gambar — skala proporsional dengan resolusi template
+        return max(12, (int) round($imageWidth * 0.04));
+    }
+
+    private function fitFontSize(
+        int $requestedSize,
+        string $text,
+        string $fontPath,
+        int $anchorX,
+        int $anchorY,
+        int $imageWidth,
+        int $imageHeight
+    ): int {
+        $fontSize = max(8, $requestedSize);
+        $minSize  = max(8, (int) floor($requestedSize * 0.25));
+
+        while ($fontSize >= $minSize) {
+            $bbox = imagettfbbox($fontSize, 0, $fontPath, $text);
+            if ($bbox === false) {
+                return $fontSize;
+            }
+
+            $textWidth  = abs($bbox[4] - $bbox[0]);
+            $textHeight = abs($bbox[5] - $bbox[1]);
+
+            $left   = $anchorX - ($textWidth / 2);
+            $right  = $anchorX + ($textWidth / 2);
+            $top    = $anchorY - ($textHeight / 2);
+            $bottom = $anchorY + ($textHeight / 2);
+
+            if ($left >= 0 && $right <= $imageWidth && $top >= 0 && $bottom <= $imageHeight) {
+                return $fontSize;
+            }
+
+            $fontSize--;
+        }
+
+        return $minSize;
     }
 }
