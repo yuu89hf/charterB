@@ -7,14 +7,20 @@
 
     {{-- Loading Overlay --}}
     <div id="loading-overlay" class="hidden fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center">
-        <div class="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-4 max-w-sm mx-4 text-center">
-            <svg class="animate-spin w-12 h-12 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-4 w-full max-w-md mx-4 text-center">
+            <svg id="loading-spinner" class="animate-spin w-12 h-12 text-blue-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
             </svg>
             <div>
-                <p class="font-bold text-gray-800 text-lg">Sedang memproses...</p>
-                <p class="text-gray-500 text-sm mt-1">Semua sertifikat sedang di-generate dan dipaket ke ZIP.<br>Mohon tunggu, jangan tutup halaman ini.</p>
+                <p class="font-bold text-gray-800 text-lg">Sedang memproses... <span id="progress-percent">0%</span></p>
+                
+                {{-- Progress Bar Container --}}
+                <div class="w-full bg-gray-200 rounded-full h-3 mt-4 overflow-hidden">
+                    <div id="progress-bar-fill" class="bg-blue-600 h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+
+                <p class="text-gray-500 text-sm mt-4">Semua sertifikat sedang di-generate dan dipaket ke ZIP.<br>Mohon tunggu, jangan tutup halaman ini.</p>
             </div>
             <div id="loading-count" class="text-blue-600 font-semibold text-sm"></div>
         </div>
@@ -84,10 +90,6 @@
                                         <input type="radio" name="format" value="jpg" class="form-radio text-indigo-600">
                                         <span class="ml-2 text-gray-700">JPG</span>
                                     </label>
-                                    <label class="inline-flex items-center">
-                                        <input type="radio" name="format" value="pdf" class="form-radio text-indigo-600">
-                                        <span class="ml-2 text-gray-700">PDF</span>
-                                    </label>
                                 </div>
                             </div>
 
@@ -111,6 +113,7 @@
 
                             <input type="hidden" name="x_pos" id="input-x" value="50">
                             <input type="hidden" name="y_pos" id="input-y" value="50">
+                            <input type="hidden" name="progress_id" id="input-progress-id" value="">
 
                             <button id="submit-btn" type="submit"
                                 class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition shadow-md flex items-center justify-center gap-2">
@@ -226,26 +229,101 @@
             reader.readAsText(file);
         });
 
-        // ── Show loading overlay on form submit ──────────────────────────────
-        document.getElementById('generate-form').addEventListener('submit', function() {
-            document.getElementById('loading-overlay').classList.remove('hidden');
-            document.getElementById('submit-btn').disabled = true;
+        // ── Show loading overlay on form submit (AJAX) ───────────────────────
+        document.getElementById('generate-form').addEventListener('submit', function(e) {
+            e.preventDefault(); // Hentikan submit standar
 
-            // Hapus cookie download_started jika ada dari download sebelumnya
+            const form = e.target;
+            const submitBtn = document.getElementById('submit-btn');
+            const progressFill = document.getElementById('progress-bar-fill');
+            const progressPercentText = document.getElementById('progress-percent');
+            const overlay = document.getElementById('loading-overlay');
+
+            // Reset progress bar
+            progressFill.style.width = '0%';
+            progressPercentText.innerText = '0%';
+
+            // Generate progress ID unik
+            const progressId = 'prog_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            document.getElementById('input-progress-id').value = progressId;
+
+            // Tampilkan loading overlay dan disable tombol submit
+            overlay.classList.remove('hidden');
+            submitBtn.disabled = true;
+
+            // Hapus cookie lama jika ada
             document.cookie = "download_started=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
 
-            // Polling untuk mendeteksi kapan download dimulai (ketika cookie dikirim oleh server)
-            const checkCookieInterval = setInterval(function() {
-                if (document.cookie.split(';').some((item) => item.trim().startsWith('download_started='))) {
-                    // Sembunyikan loading overlay dan aktifkan kembali tombol submit
-                    document.getElementById('loading-overlay').classList.add('hidden');
-                    document.getElementById('submit-btn').disabled = false;
-                    
-                    // Hapus cookie setelah dideteksi
-                    document.cookie = "download_started=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-                    clearInterval(checkCookieInterval);
+            // Persiapkan data form
+            const formData = new FormData(form);
+
+            // Jalankan polling progress bar
+            let pollInterval;
+            const startPolling = () => {
+                pollInterval = setInterval(async () => {
+                    try {
+                        const response = await fetch(`/certificate/progress/${progressId}`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            const progress = data.progress || 0;
+                            
+                            progressFill.style.width = progress + '%';
+                            progressPercentText.innerText = progress + '%';
+
+                            if (progress >= 100) {
+                                clearInterval(pollInterval);
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Gagal mengambil progress:', err);
+                    }
+                }, 800);
+            };
+
+            // Kirim request generate via AJAX
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
                 }
-            }, 500);
+            })
+            .then(async response => {
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.message || 'Gagal memproses pembuatan sertifikat.');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success && data.download_url) {
+                    // Pemicu download file ZIP
+                    window.location.href = data.download_url;
+
+                    // Tunggu pendeteksian download dimulai via Cookie
+                    const checkDownloadCookie = setInterval(() => {
+                        if (document.cookie.split(';').some((item) => item.trim().startsWith('download_started='))) {
+                            // Tutup overlay, bersihkan cookie & interval
+                            overlay.classList.add('hidden');
+                            submitBtn.disabled = false;
+                            document.cookie = "download_started=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                            clearInterval(checkDownloadCookie);
+                            clearInterval(pollInterval);
+                        }
+                    }, 500);
+                } else {
+                    throw new Error('Respons tidak valid dari server.');
+                }
+            })
+            .catch(error => {
+                clearInterval(pollInterval);
+                overlay.classList.add('hidden');
+                submitBtn.disabled = false;
+                alert('⚠️ Error: ' + error.message);
+            });
+
+            // Mulai polling setelah submit terkirim
+            startPolling();
         });
     </script>
 </x-app-layout>

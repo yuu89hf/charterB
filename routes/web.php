@@ -21,6 +21,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Route untuk memproses upload dan generate piagam
     Route::post('/certificate/generate', [CertificateController::class, 'generate'])->name('certificate.generate');
+
+    // Route untuk melihat progress pembuatan sertifikat
+    Route::get('/certificate/progress/{progressId}', [CertificateController::class, 'progress'])->name('certificate.progress');
+
+    // Route untuk mengunduh berkas ZIP hasil generate
+    Route::get('/certificate/download/{file}', [CertificateController::class, 'download'])->name('certificate.download');
 });
 
 // Route untuk profile

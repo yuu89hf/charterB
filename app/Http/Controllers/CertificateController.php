@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Cookie;
 use ZipArchive;
 
 class CertificateController extends Controller
@@ -22,7 +23,7 @@ class CertificateController extends Controller
         ini_set('memory_limit', '512M');
 
         $request->validate([
-            'template'  => 'required|image|mimes:png,jpg,jpeg',
+            'template'  => 'required|image|mimes:png,jpg,jpeg,webp,gif,bmp',
             'csv_file'  => 'required|file|mimes:csv,txt',
             'x_pos'     => 'required|numeric',
             'y_pos'     => 'required|numeric',
@@ -40,8 +41,21 @@ class CertificateController extends Controller
         // Auto-skip baris pertama jika isinya "nama", "name", atau "no" (header)
         $names = [];
         if (($handle = fopen($csvFile->getRealPath(), 'r')) !== false) {
+            // Deteksi otomatis pembatas/separator (koma ',' atau titik koma ';')
+            // Hal ini penting karena Excel di Indonesia sering menyimpan CSV dengan separator ';'
+            $delimiter = ',';
+            $firstLine = fgets($handle);
+            if ($firstLine !== false) {
+                $commaCount = substr_count($firstLine, ',');
+                $semicolonCount = substr_count($firstLine, ';');
+                if ($semicolonCount > $commaCount) {
+                    $delimiter = ';';
+                }
+            }
+            rewind($handle);
+
             $firstRow = true;
-            while (($data = fgetcsv($handle, 0, ',')) !== false) {
+            while (($data = fgetcsv($handle, 0, $delimiter)) !== false) {
                 if (!isset($data[0]) || trim($data[0]) === '') {
                     continue;
                 }
@@ -69,11 +83,10 @@ class CertificateController extends Controller
         // ─── Setup Image Manager ─────────────────────────────────────────────
         $manager = ImageManager::usingDriver(Driver::class);
 
-        // Ambil dimensi gambar asli untuk konversi koordinat persen → pixel
-        $tempImage      = $manager->decode($template->getRealPath());
-        $originalWidth  = $tempImage->width();
-        $originalHeight = $tempImage->height();
-        unset($tempImage); // bebaskan memori
+        // Ambil dimensi gambar asli untuk konversi koordinat persen → pixel (Decode sekali saja)
+        $baseImage      = $manager->decode($template->getRealPath());
+        $originalWidth  = $baseImage->width();
+        $originalHeight = $baseImage->height();
 
         $x = (int) (($percentX / 100) * $originalWidth);
         $y = (int) (($percentY / 100) * $originalHeight);
@@ -81,7 +94,6 @@ class CertificateController extends Controller
         $fontPath = public_path('fonts/Roboto-Bold.ttf');
 
         // ─── Buat file ZIP di folder temp sistem ─────────────────────────────
-        // Gunakan sys_get_temp_dir() supaya pasti bisa ditulis di semua environment
         $zipName = 'sertifikat_' . time() . '.zip';
         $zipPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $zipName;
 
@@ -89,14 +101,22 @@ class CertificateController extends Controller
         $opened = $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
 
         if ($opened !== true) {
-            return back()->withErrors([
-                'csv_file' => 'Gagal membuat file ZIP (kode error: ' . $opened . '). Pastikan folder temp bisa ditulis.',
-            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal membuat file ZIP (kode error: ' . $opened . '). Pastikan folder temp bisa ditulis.'
+            ], 500);
+        }
+
+        $progressId = $request->input('progress_id');
+        $totalNames = count($names);
+        if ($progressId) {
+            cache()->put("progress_{$progressId}", 0, 120);
         }
 
         // ─── Generate sertifikat untuk setiap nama ───────────────────────────
-        foreach ($names as $name) {
-            $image = $manager->decode($template->getRealPath());
+        foreach ($names as $index => $name) {
+            // Gunakan clone daripada decode berkali-kali (optimasi kecepatan utama!)
+            $image = clone $baseImage;
 
             $image->text($name, $x, $y, function ($font) use ($fontPath) {
                 $font->file(file_exists($fontPath) ? $fontPath : 'C:\\Windows\\Fonts\\arial.ttf');
@@ -109,19 +129,30 @@ class CertificateController extends Controller
             $safeName = preg_replace('/[^A-Za-z0-9\-]/', '_', $name);
             $safeName = preg_replace('/_+/', '_', trim($safeName, '_')); // rapikan underscore ganda
 
+            // Fallback jika nama kosong (misal berisi huruf non-latin seperti Arab/Mandarin, atau emoji)
+            if ($safeName === '') {
+                $safeName = 'sertifikat_' . bin2hex(random_bytes(4));
+            }
+
             if ($format === 'pdf') {
-                $encoded = $image->encodeUsingFileExtension('png');
-                $base64  = 'data:image/png;base64,' . base64_encode((string) $encoded);
+                // Simpan gambar sementara ke disk untuk dibaca Dompdf (jauh lebih cepat daripada base64)
+                $tempImagePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'temp_cert_' . uniqid() . '.png';
+                $image->save($tempImagePath);
 
                 $pdf = Pdf::loadHTML("
                     <html>
                     <body style='margin:0;padding:0;text-align:center;background:#fff;'>
-                        <img src='{$base64}' style='width:100%;height:auto;display:block;' />
+                        <img src='{$tempImagePath}' style='width:100%;height:auto;display:block;' />
                     </body>
                     </html>
                 ")->setPaper('A4', 'landscape');
 
                 $zip->addFromString($safeName . '.pdf', $pdf->output());
+
+                // Hapus file temp setelah selesai
+                if (file_exists($tempImagePath)) {
+                    unlink($tempImagePath);
+                }
             } elseif ($format === 'jpg') {
                 $encodedImage = $image->encodeUsingFileExtension('jpg');
                 $zip->addFromString($safeName . '.jpg', (string) $encodedImage);
@@ -130,15 +161,47 @@ class CertificateController extends Controller
                 $zip->addFromString($safeName . '.png', (string) $encodedImage);
             }
 
+            // Simpan progress ke Cache
+            if ($progressId) {
+                $percent = (int) ((($index + 1) / $totalNames) * 100);
+                cache()->put("progress_{$progressId}", $percent, 120);
+            }
+
             // Bebaskan memori tiap iterasi agar tidak OOM untuk 100+ file
-            unset($image, $encodedImage, $encoded, $pdf, $base64);
+            unset($image, $encodedImage, $pdf, $tempImagePath);
         }
 
         $zip->close();
+        unset($baseImage); // Bebaskan memori template asli
 
-        // ─── Kirim ZIP ke browser lalu hapus ─────────────────────────────────
-        return response()->download($zipPath, $zipName, [
-            'Content-Type' => 'application/zip',
-        ])->deleteFileAfterSend(true)->withCookie(cookie('download_started', 'true', 1, '/', null, false, false));
+        if ($progressId) {
+            cache()->put("progress_{$progressId}", 100, 120);
+        }
+
+        return response()->json([
+            'success' => true,
+            'download_url' => route('certificate.download', ['file' => $zipName])
+        ]);
+    }
+
+    public function progress($progressId)
+    {
+        $progress = cache()->get("progress_{$progressId}", 0);
+        return response()->json(['progress' => (int) $progress]);
+    }
+
+    public function download($file)
+    {
+        $file = basename($file);
+        $zipPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $file;
+
+        if (!file_exists($zipPath)) {
+            abort(404, 'File not found');
+        }
+
+        // Simpan cookie download_started agar JS tahu unduhan dimulai
+        Cookie::queue('download_started', 'true', 1, '/', null, false, false);
+
+        return response()->download($zipPath, $file)->deleteFileAfterSend(true);
     }
 }
