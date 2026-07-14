@@ -44,6 +44,7 @@ test('user dapat mengunggah template dan csv untuk menghasilkan zip sertifikat',
             'y_pos' => 50,
             'format' => 'png',
             'font_scale' => 100,
+            'resolution_scale' => 100,
         ]);
 
     $response->assertStatus(200);

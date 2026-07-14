@@ -130,6 +130,24 @@
                                 <p id="font-size-info" class="text-xs text-gray-400 mt-1 hidden"></p>
                             </div>
 
+                            <div class="mb-6">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    4. Resolusi Output
+                                    <span id="resolution-scale-label" class="text-blue-600 font-bold">100%</span>
+                                </label>
+                                <input type="range" name="resolution_scale" id="resolution-scale" min="25" max="300" value="100" step="5"
+                                    class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                                <div class="flex justify-between text-xs text-gray-400 mt-1">
+                                    <span>25%</span>
+                                    <span>100%</span>
+                                    <span>300%</span>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-2">
+                                    Ubah ukuran gambar output. 100% = resolusi asli template. Font ikut menyesuaikan proporsional.
+                                </p>
+                                <p id="resolution-info" class="text-xs text-gray-400 mt-1 hidden"></p>
+                            </div>
+
                             <input type="hidden" name="x_pos" id="input-x" value="50">
                             <input type="hidden" name="y_pos" id="input-y" value="50">
                             <input type="hidden" name="progress_id" id="input-progress-id" value="">
@@ -177,19 +195,53 @@
         const fontScaleInput = document.getElementById('font-scale');
         const fontScaleLabel = document.getElementById('font-scale-label');
         const fontSizeInfo = document.getElementById('font-size-info');
+        const resolutionScaleInput = document.getElementById('resolution-scale');
+        const resolutionScaleLabel = document.getElementById('resolution-scale-label');
+        const resolutionInfo = document.getElementById('resolution-info');
         const previewNameText = document.getElementById('preview-name-text');
 
         let imageNaturalWidth = 0;
+        let imageNaturalHeight = 0;
         let firstCsvName = 'Nama Penerima';
+
+        function getResolutionScale() {
+            return parseInt(resolutionScaleInput.value, 10) / 100;
+        }
+
+        function getOutputDimensions() {
+            if (!imageNaturalWidth) return { width: 0, height: 0 };
+            const scale = getResolutionScale();
+            return {
+                width: Math.max(100, Math.round(imageNaturalWidth * scale)),
+                height: Math.max(100, Math.round(imageNaturalHeight * scale)),
+            };
+        }
 
         function calculateBaseFontSize(width) {
             return Math.max(12, Math.round(width * 0.04));
         }
 
         function getOutputFontSize() {
-            if (!imageNaturalWidth) return 16;
+            const { width } = getOutputDimensions();
+            if (!width) return 16;
             const scale = parseInt(fontScaleInput.value, 10) / 100;
-            return Math.round(calculateBaseFontSize(imageNaturalWidth) * scale);
+            return Math.round(calculateBaseFontSize(width) * scale);
+        }
+
+        function updateOutputInfo() {
+            if (!imageNaturalWidth) return;
+
+            const { width, height } = getOutputDimensions();
+            const outputSize = getOutputFontSize();
+            const resPercent = resolutionScaleInput.value;
+
+            resolutionScaleLabel.textContent = resPercent + '%';
+            resolutionInfo.textContent = 'Resolusi output: ' + width + ' × ' + height + 'px (asli ' + imageNaturalWidth + ' × ' + imageNaturalHeight + 'px)';
+            resolutionInfo.classList.remove('hidden');
+
+            fontScaleLabel.textContent = fontScaleInput.value + '%';
+            fontSizeInfo.textContent = 'Ukuran font output: ' + outputSize + 'px';
+            fontSizeInfo.classList.remove('hidden');
         }
 
         function updatePreviewFontSize() {
@@ -200,9 +252,7 @@
             const previewSize = Math.max(8, Math.round(outputSize * displayScale));
 
             dragItem.style.fontSize = previewSize + 'px';
-            fontScaleLabel.textContent = fontScaleInput.value + '%';
-            fontSizeInfo.textContent = 'Ukuran output: ' + outputSize + 'px (pada resolusi asli ' + imageNaturalWidth + 'px)';
-            fontSizeInfo.classList.remove('hidden');
+            updateOutputInfo();
         }
 
         function positionTextAtCenter() {
@@ -227,6 +277,7 @@
                 reader.onload = function(event) {
                     previewImg.onload = function() {
                         imageNaturalWidth = previewImg.naturalWidth;
+                        imageNaturalHeight = previewImg.naturalHeight;
                         document.getElementById('canvas-container').classList.remove('hidden');
                         document.getElementById('placeholder-text').classList.add('hidden');
                         positionTextAtCenter();
@@ -239,6 +290,7 @@
         });
 
         fontScaleInput.addEventListener('input', updatePreviewFontSize);
+        resolutionScaleInput.addEventListener('input', updatePreviewFontSize);
 
         window.addEventListener('resize', updatePreviewFontSize);
         previewImg.addEventListener('load', updatePreviewFontSize);

@@ -26,8 +26,9 @@ class CertificateController extends Controller
             'csv_file'   => 'required|file|mimes:csv,txt',
             'x_pos'      => 'required|numeric',
             'y_pos'      => 'required|numeric',
-            'format'     => 'required|in:png,jpg',
-            'font_scale' => 'required|numeric|min:25|max:300',
+            'format'           => 'required|in:png,jpg',
+            'font_scale'       => 'required|numeric|min:25|max:300',
+            'resolution_scale' => 'required|numeric|min:25|max:300',
         ]);
 
         $template = $request->file('template');
@@ -35,8 +36,9 @@ class CertificateController extends Controller
 
         $percentX   = (float) $request->input('x_pos');
         $percentY   = (float) $request->input('y_pos');
-        $format     = $request->input('format', 'png');
-        $fontScale  = (float) $request->input('font_scale', 100);
+        $format           = $request->input('format', 'png');
+        $fontScale        = (float) $request->input('font_scale', 100);
+        $resolutionScale  = (float) $request->input('resolution_scale', 100);
 
         // ─── Baca CSV (Kolom A) ──────────────────────────────────────────────
         // Auto-skip baris pertama jika isinya "nama", "name", atau "no" (header)
@@ -88,6 +90,13 @@ class CertificateController extends Controller
         $baseImage      = $manager->decode($template->getRealPath());
         $originalWidth  = $baseImage->width();
         $originalHeight = $baseImage->height();
+
+        if ($resolutionScale !== 100.0) {
+            $outputWidth  = max(100, (int) round($originalWidth * ($resolutionScale / 100)));
+            $baseImage    = $baseImage->scale(width: $outputWidth);
+            $originalWidth  = $baseImage->width();
+            $originalHeight = $baseImage->height();
+        }
 
         $x = (int) (($percentX / 100) * $originalWidth);
         $y = (int) (($percentY / 100) * $originalHeight);
