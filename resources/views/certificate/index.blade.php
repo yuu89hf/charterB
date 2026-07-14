@@ -81,7 +81,7 @@
                             @csrf
 
                             <div class="mb-4">
-                                <label class="block text-gray-700 text-sm font-bold mb-2">Format Output</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">1. Format Output</label>
                                 <div class="flex items-center space-x-4">
                                     <label class="inline-flex items-center">
                                         <input type="radio" name="format" value="png" checked class="form-radio text-indigo-600">
@@ -95,13 +95,13 @@
                             </div>
 
                             <div class="mb-6">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">1. Upload Template</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">2. Upload Template</label>
                                 <input type="file" name="template" id="image-upload" accept="image/*" required
                                     class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
                             </div>
 
                             <div class="mb-4">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">2. Data Nama (CSV)</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">3. Data Nama (CSV)</label>
                                 <input type="file" name="csv_file" id="csv-upload" accept=".csv,.txt" required
                                     class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100" />
                                 {{-- Preview info jumlah nama terdeteksi --}}
@@ -114,7 +114,7 @@
 
                             <div class="mb-6">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    3. Ukuran Font
+                                    4. Ukuran Font
                                     <span id="font-scale-label" class="text-blue-600 font-bold">100%</span>
                                 </label>
                                 <input type="range" name="font_scale" id="font-scale" min="25" max="300" value="100" step="5"
@@ -132,7 +132,7 @@
 
                             <div class="mb-6">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    4. Resolusi Output
+                                    5. Resolusi Output
                                     <span id="resolution-scale-label" class="text-blue-600 font-bold">100%</span>
                                 </label>
                                 <input type="range" name="resolution_scale" id="resolution-scale" min="25" max="300" value="100" step="5"
