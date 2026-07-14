@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\CertificateController; // Nama controller diubah!
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -9,15 +10,18 @@ Route::get('/', function () {
 
 // Hmph, perhatikan di sini! Kita satukan dashboard dan fitur piagam 
 // ke dalam satu grup middleware yang mewajibkan login & verifikasi email.
-Route::middleware(['auth','verified'])->group(function () {
-    Route::get('/dashboard',function(){return view ('dashboard')})  
-})->name('dashboard');
+Route::middleware(['auth', 'verified'])->group(function () {
 
-// Route untuk menampilkan halaman upload piagam
-Route::get('/piagam', [PiagamController::class, 'index'])->name('piagam.index');
+    Route::get('/dashboard', function() {
+        return view('dashboard');
+    })->name('dashboard');
 
-// Route untuk memproses upload dan generate piagam
-Route::post('/piagam/generate', [PiagamController::class, 'generate'])->name('piagam.generate');
+    // Route untuk menampilkan halaman upload piagam
+    Route::get('/piagam', [CertificateController::class, 'index'])->name('piagam.index');
+
+    // Route untuk memproses upload dan generate piagam
+    Route::post('/piagam/generate', [CertificateController::class, 'generate'])->name('piagam.generate');
+});
 
 // Route untuk profile
 Route::middleware('auth')->group(function () {
