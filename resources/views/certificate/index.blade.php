@@ -292,12 +292,12 @@
                                                 <label class="block text-xs font-semibold text-gray-600 mb-1.5">Image Layout Mode</label>
                                                 <div class="flex items-center space-x-4">
                                                     <label class="inline-flex items-center cursor-pointer">
-                                                        <input type="radio" name="fit_mode" value="full" class="form-radio text-orange-500 focus:ring-orange-400">
-                                                        <span class="ml-2 text-xs text-gray-600 font-medium">Full Page</span>
-                                                    </label>
-                                                    <label class="inline-flex items-center cursor-pointer">
                                                         <input type="radio" name="fit_mode" value="smaller" checked class="form-radio text-orange-500 focus:ring-orange-400">
                                                         <span class="ml-2 text-xs text-gray-600 font-medium">Custom</span>
+                                                    </label>
+                                                    <label class="inline-flex items-center cursor-pointer">
+                                                        <input type="radio" name="fit_mode" value="full" class="form-radio text-orange-500 focus:ring-orange-400">
+                                                        <span class="ml-2 text-xs text-gray-600 font-medium">Full Page</span>
                                                     </label>
                                                 </div>
                                             </div>
