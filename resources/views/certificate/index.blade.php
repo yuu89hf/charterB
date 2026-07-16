@@ -426,8 +426,13 @@
                         imageNaturalHeight = previewImg.naturalHeight;
                         document.getElementById('canvas-container').classList.remove('hidden');
                         document.getElementById('placeholder-text').classList.add('hidden');
-                        positionTextAtCenter();
-                        updatePreview();
+                        
+                        // Berikan jeda 50ms agar browser selesai melakukan layout/render
+                        // Sehingga clientWidth & getBoundingClientRect() tidak bernilai 0
+                        setTimeout(() => {
+                            positionTextAtCenter();
+                            updatePreview();
+                        }, 50);
                     };
                     previewImg.src = event.target.result;
                 };
@@ -816,5 +821,14 @@
             // Mulai polling setelah submit terkirim
             startPolling();
         });
+
+        // Pemicu otomatis jika file sudah terisi saat page load (misal setelah refresh halaman)
+        if (imgUpload.files && imgUpload.files.length > 0) {
+            imgUpload.dispatchEvent(new Event('change'));
+        }
+        const csvUploadEl = document.getElementById('csv-upload');
+        if (csvUploadEl && csvUploadEl.files && csvUploadEl.files.length > 0) {
+            csvUploadEl.dispatchEvent(new Event('change'));
+        }
     </script>
 </x-app-layout>
