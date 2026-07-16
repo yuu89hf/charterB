@@ -55,7 +55,7 @@ class CertificateController extends Controller
         $usePaper         = $request->input('use_paper') === 'y';
         $paperSize        = $request->input('paper_size', 'A4');
         $paperOrientation = $request->input('paper_orientation', 'auto');
-        $fitMode          = $request->input('fit_mode', 'full');
+        $fitMode          = $request->input('fit_mode', 'smaller');
         $marginCm         = (float) $request->input('margin', 1.0);
         $imgX             = (float) $request->input('img_x', 0);
         $imgY             = (float) $request->input('img_y', 0);

@@ -70,9 +70,9 @@
     </div>
 
     <div class="py-6 h-[calc(100vh-64px)] overflow-hidden">
-        <div class="max-w-[1600px] mx-auto sm:px-6 lg:px-8 h-full flex gap-4">
+        <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col lg:flex-row gap-4 relative overflow-hidden">
             
-            <div class="flex-grow bg-gray-200 rounded-xl relative overflow-hidden flex items-center justify-center p-10 border-2 border-dashed border-gray-300">
+            <div class="flex-grow bg-gray-200 rounded-xl relative overflow-hidden flex items-center justify-center p-4 sm:p-10 border-2 border-dashed border-gray-300 h-[60vh] lg:h-full">
                 
                 <div id="canvas-container" class="relative shadow-2xl bg-white hidden overflow-hidden select-none">
                     <!-- Draggable Image Wrapper -->
@@ -102,13 +102,13 @@
                 </div>
             </div>
 
-            <div class="relative flex h-full">
+            <div id="sidebar-container" class="lg:relative fixed inset-y-0 right-0 z-40 flex h-full transition-transform duration-300 ease-in-out translate-x-full lg:translate-x-0">
                 
                 <button onclick="toggleSidebar()" class="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 bg-blue-600 text-white shadow-lg rounded-full w-8 h-8 flex items-center justify-center hover:bg-blue-700 transition-all duration-300 z-50 focus:outline-none">
-                    <span id="toggle-btn-text" class="font-bold text-sm">&gt;</span>
+                    <span id="toggle-btn-text" class="font-bold text-sm">&lt;</span>
                 </button>
 
-                <div id="sidebar" class="w-80 bg-white shadow-xl rounded-xl h-full transition-all duration-300 ease-in-out border-l border-gray-100 overflow-hidden">
+                <div id="sidebar" class="w-80 bg-white shadow-xl rounded-l-xl lg:rounded-xl h-full border-l border-gray-100 overflow-hidden">
                     
                     <div id="sidebar-content" class="p-6 h-full overflow-y-auto w-80">
                         <h3 class="font-bold text-lg mb-4 text-gray-800">File Settings</h3>
@@ -265,8 +265,8 @@
                                             <div class="mb-3">
                                                 <label class="block text-xs font-semibold text-gray-600 mb-1.5">Paper Size</label>
                                                 <select name="paper_size" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-xs py-1.5 px-2.5">
-                                                    <option value="A4" selected>A4: 21 x 29.7 cm (Most popular & practical)</option>
-                                                    <option value="F4">F4 (Folio): 21 x 33 cm</option>
+                                                    <option value="A4" selected>A4: 21 x 29.7 cm</option>
+                                                    <option value="F4">F4/Folio: 21 x 33 cm</option>
                                                 </select>
                                             </div>
 
@@ -292,21 +292,21 @@
                                                 <label class="block text-xs font-semibold text-gray-600 mb-1.5">Image Layout Mode</label>
                                                 <div class="flex items-center space-x-4">
                                                     <label class="inline-flex items-center cursor-pointer">
-                                                        <input type="radio" name="fit_mode" value="full" checked class="form-radio text-orange-500 focus:ring-orange-400">
+                                                        <input type="radio" name="fit_mode" value="full" class="form-radio text-orange-500 focus:ring-orange-400">
                                                         <span class="ml-2 text-xs text-gray-600 font-medium">Full Page</span>
                                                     </label>
                                                     <label class="inline-flex items-center cursor-pointer">
-                                                        <input type="radio" name="fit_mode" value="smaller" class="form-radio text-orange-500 focus:ring-orange-400">
-                                                        <span class="ml-2 text-xs text-gray-600 font-medium">Custom (Canva Mode)</span>
+                                                        <input type="radio" name="fit_mode" value="smaller" checked class="form-radio text-orange-500 focus:ring-orange-400">
+                                                        <span class="ml-2 text-xs text-gray-600 font-medium">Custom</span>
                                                     </label>
                                                 </div>
                                             </div>
 
-                                            <div id="image-scale-container" class="hidden mb-1 bg-white p-2.5 rounded border border-orange-100">
+                                            <div id="image-scale-container" class="mb-1 bg-white p-2.5 rounded border border-orange-100">
                                                 <label class="block text-[11px] font-semibold text-gray-500 mb-1">
                                                     Image Scale: <span id="img-scale-val" class="text-orange-500 font-bold">100%</span>
                                                 </label>
-                                                <input type="range" id="img-scale-slider" min="10" max="100" value="100" step="1" class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500">
+                                                <input type="range" id="img-scale-slider" min="10" max="250" value="100" step="1" class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500">
                                                 <p class="text-[9px] text-gray-400 mt-1">Scale template image relative to the paper canvas.</p>
                                             </div>
                                         </div>
@@ -357,23 +357,65 @@
     </div>
 
     <script>
-        let sidebarOpen = true;
-
         function toggleSidebar() {
+            const containerEl = document.getElementById('sidebar-container');
             const sidebar = document.getElementById('sidebar');
-            const toggleBtnText = document.getElementById('toggle-btn-text');
-            if (sidebarOpen) {
-                sidebar.style.width = '0px';
-                sidebar.style.borderLeftWidth = '0px';
-                toggleBtnText.innerText = '<';
-                sidebarOpen = false;
+            const btnText = document.getElementById('toggle-btn-text');
+
+            const isMobile = window.innerWidth < 1024;
+
+            if (isMobile) {
+                if (containerEl.classList.contains('translate-x-full')) {
+                    containerEl.classList.remove('translate-x-full');
+                    containerEl.classList.add('translate-x-0');
+                    btnText.textContent = '>';
+                } else {
+                    containerEl.classList.remove('translate-x-0');
+                    containerEl.classList.add('translate-x-full');
+                    btnText.textContent = '<';
+                }
             } else {
-                sidebar.style.width = '320px';
-                sidebar.style.borderLeftWidth = '1px';
-                toggleBtnText.innerText = '>';
-                sidebarOpen = true;
+                if (sidebar.style.width === '0px') {
+                    sidebar.style.width = '320px';
+                    sidebar.style.borderLeftWidth = '1px';
+                    btnText.innerText = '>';
+                } else {
+                    sidebar.style.width = '0px';
+                    sidebar.style.borderLeftWidth = '0px';
+                    btnText.innerText = '<';
+                }
             }
+            
+            setTimeout(() => {
+                updateCanvasContainerSize();
+                updateImageLayerPositionAndSize();
+                updateFontPreview();
+            }, 305);
         }
+
+        window.addEventListener('resize', () => {
+            const containerEl = document.getElementById('sidebar-container');
+            const sidebar = document.getElementById('sidebar');
+            const btnText = document.getElementById('toggle-btn-text');
+            const isMobile = window.innerWidth < 1024;
+
+            if (isMobile) {
+                sidebar.style.width = '';
+                sidebar.style.borderLeftWidth = '';
+                if (!containerEl.classList.contains('translate-x-0') && !containerEl.classList.contains('translate-x-full')) {
+                    containerEl.classList.add('translate-x-full');
+                }
+                btnText.textContent = containerEl.classList.contains('translate-x-0') ? '>' : '<';
+            } else {
+                containerEl.classList.remove('translate-x-full', 'translate-x-0');
+                sidebar.style.width = sidebar.style.width || '320px';
+                btnText.textContent = sidebar.style.width === '0px' ? '<' : '>';
+            }
+
+            updateCanvasContainerSize();
+            updateImageLayerPositionAndSize();
+            updateFontPreview();
+        });
 
         // ── Drag & Drop preview ──────────────────────────────────────────────
         const dragItem  = document.getElementById('draggable-name');
@@ -744,10 +786,64 @@
             elementStartY = imgWrapper.offsetTop;
         });
 
-        document.addEventListener('mousemove', (e) => {
+        function getTouchPos(e) {
+            return {
+                x: e.touches[0].clientX,
+                y: e.touches[0].clientY
+            };
+        }
+
+        // Register handle touchstart
+        document.querySelectorAll('.resize-handle').forEach(handle => {
+            handle.addEventListener('touchstart', (e) => {
+                e.stopPropagation();
+                isResizing = true;
+                activeHandle = handle.dataset.handle;
+                
+                const pos = getTouchPos(e);
+                dragStartX = pos.x;
+                dragStartY = pos.y;
+                resizeStartW = imgWrapper.clientWidth;
+                resizeStartH = imgWrapper.clientHeight;
+                resizeStartLeft = imgWrapper.offsetLeft;
+                resizeStartTop = imgWrapper.offsetTop;
+            });
+        });
+
+        dragItem.addEventListener('touchstart', (e) => {
+            e.stopPropagation();
+            activeDragElement = dragItem;
+            isDragging = true;
+            dragItem.style.zIndex = 100;
+            
+            const pos = getTouchPos(e);
+            dragStartX = pos.x;
+            dragStartY = pos.y;
+            elementStartX = dragItem.offsetLeft;
+            elementStartY = dragItem.offsetTop;
+
+            isFocused = true;
+            document.getElementById('preview-name-text').classList.add('ring-2', 'ring-blue-500', 'ring-offset-2');
+        });
+
+        imgWrapper.addEventListener('touchstart', (e) => {
+            if (!isUsePaper() || !isFitModeCustom()) return;
+            if (e.target.classList.contains('resize-handle')) return;
+
+            activeDragElement = imgWrapper;
+            isDragging = true;
+
+            const pos = getTouchPos(e);
+            dragStartX = pos.x;
+            dragStartY = pos.y;
+            elementStartX = imgWrapper.offsetLeft;
+            elementStartY = imgWrapper.offsetTop;
+        });
+
+        function handleMove(clientX, clientY) {
             if (isResizing) {
-                const deltaX = e.clientX - dragStartX;
-                const deltaY = e.clientY - dragStartY;
+                const deltaX = clientX - dragStartX;
+                const deltaY = clientY - dragStartY;
                 
                 const canvasW = container.clientWidth;
                 const canvasH = container.clientHeight;
@@ -758,22 +854,100 @@
                 let newLeft = resizeStartLeft;
                 let newTop = resizeStartTop;
 
+                const threshold = 12; // Snap distance in pixels
+                let snapped = false;
+
+                vGuide.classList.add('hidden');
+                hGuide.classList.add('hidden');
+
                 if (activeHandle === 'br') {
                     newW = Math.max(50, resizeStartW + deltaX);
                     newH = newW / imgRatio;
+
+                    // Snap to right edge of canvas
+                    if (Math.abs((newLeft + newW) - canvasW) < threshold) {
+                        newW = canvasW - newLeft;
+                        newH = newW / imgRatio;
+                        vGuide.style.left = canvasW + 'px';
+                        vGuide.classList.remove('hidden');
+                        snapped = true;
+                    }
+                    // Snap to bottom edge of canvas
+                    if (!snapped && Math.abs((newTop + newH) - canvasH) < threshold) {
+                        newH = canvasH - newTop;
+                        newW = newH * imgRatio;
+                        hGuide.style.top = canvasH + 'px';
+                        hGuide.classList.remove('hidden');
+                    }
                 } else if (activeHandle === 'bl') {
                     newW = Math.max(50, resizeStartW - deltaX);
                     newH = newW / imgRatio;
                     newLeft = resizeStartLeft + (resizeStartW - newW);
+
+                    // Snap left edge to canvas left border
+                    if (Math.abs(newLeft) < threshold) {
+                        newLeft = 0;
+                        newW = resizeStartLeft + resizeStartW;
+                        newH = newW / imgRatio;
+                        vGuide.style.left = '0px';
+                        vGuide.classList.remove('hidden');
+                        snapped = true;
+                    }
+                    // Snap bottom edge to canvas bottom border
+                    if (!snapped && Math.abs((newTop + newH) - canvasH) < threshold) {
+                        newH = canvasH - newTop;
+                        newW = newH * imgRatio;
+                        newLeft = resizeStartLeft + (resizeStartW - newW);
+                        hGuide.style.top = canvasH + 'px';
+                        hGuide.classList.remove('hidden');
+                    }
                 } else if (activeHandle === 'tr') {
                     newW = Math.max(50, resizeStartW + deltaX);
                     newH = newW / imgRatio;
                     newTop = resizeStartTop + (resizeStartH - newH);
+
+                    // Snap right edge to canvas right border
+                    if (Math.abs((newLeft + newW) - canvasW) < threshold) {
+                        newW = canvasW - newLeft;
+                        newH = newW / imgRatio;
+                        newTop = resizeStartTop + (resizeStartH - newH);
+                        vGuide.style.left = canvasW + 'px';
+                        vGuide.classList.remove('hidden');
+                        snapped = true;
+                    }
+                    // Snap top edge to canvas top border
+                    if (!snapped && Math.abs(newTop) < threshold) {
+                        newTop = 0;
+                        newH = resizeStartTop + resizeStartH;
+                        newW = newH * imgRatio;
+                        hGuide.style.top = '0px';
+                        hGuide.classList.remove('hidden');
+                    }
                 } else if (activeHandle === 'tl') {
                     newW = Math.max(50, resizeStartW - deltaX);
                     newH = newW / imgRatio;
                     newLeft = resizeStartLeft + (resizeStartW - newW);
                     newTop = resizeStartTop + (resizeStartH - newH);
+
+                    // Snap left edge to canvas left border
+                    if (Math.abs(newLeft) < threshold) {
+                        newLeft = 0;
+                        newW = resizeStartLeft + resizeStartW;
+                        newH = newW / imgRatio;
+                        newTop = resizeStartTop + (resizeStartH - newH);
+                        vGuide.style.left = '0px';
+                        vGuide.classList.remove('hidden');
+                        snapped = true;
+                    }
+                    // Snap top edge to canvas top border
+                    if (!snapped && Math.abs(newTop) < threshold) {
+                        newTop = 0;
+                        newH = resizeStartTop + resizeStartH;
+                        newW = newH * imgRatio;
+                        newLeft = resizeStartLeft + (resizeStartW - newW);
+                        hGuide.style.top = '0px';
+                        hGuide.classList.remove('hidden');
+                    }
                 }
 
                 if (newW > 0 && newH > 0) {
@@ -795,7 +969,7 @@
                         fitBaseW = canvasH * imgRatio;
                     }
                     const computedScale = Math.round((newW / fitBaseW) * 100);
-                    imgScaleSlider.value = Math.max(10, Math.min(100, computedScale));
+                    imgScaleSlider.value = Math.max(10, Math.min(250, computedScale));
                     imgScaleVal.innerText = imgScaleSlider.value + '%';
 
                     document.getElementById('input-img-x').value = imgXPercent.toFixed(4);
@@ -810,8 +984,8 @@
 
             if (!isDragging || !activeDragElement) return;
 
-            const deltaX = e.clientX - dragStartX;
-            const deltaY = e.clientY - dragStartY;
+            const deltaX = clientX - dragStartX;
+            const deltaY = clientY - dragStartY;
 
             if (activeDragElement === dragItem) {
                 const rect = imgWrapper.getBoundingClientRect();
@@ -931,8 +1105,32 @@
                 document.getElementById('input-img-x').value = imgXPercent.toFixed(4);
                 document.getElementById('input-img-y').value = imgYPercent.toFixed(4);
             }
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            handleMove(e.clientX, e.clientY);
         });
 
+        document.addEventListener('touchmove', (e) => {
+            if (isDragging || isResizing) {
+                if (e.cancelable) e.preventDefault();
+                const pos = getTouchPos(e);
+                handleMove(pos.x, pos.y);
+            }
+        }, { passive: false });
+
+        function handleEnd() {
+            isDragging = false;
+            isResizing = false;
+            activeDragElement = null;
+            activeHandle = null;
+            vGuide.classList.add('hidden');
+            hGuide.classList.add('hidden');
+        }
+
+        document.addEventListener('mouseup', handleEnd);
+        document.addEventListener('touchend', handleEnd);
+        document.addEventListener('touchcancel', handleEnd);
         let isFocused = false;
 
         document.addEventListener('click', (e) => {
@@ -980,15 +1178,6 @@
             document.getElementById('coord-y').innerText = py + '%';
             document.getElementById('input-x').value = px;
             document.getElementById('input-y').value = py;
-        });
-
-        document.addEventListener('mouseup', () => {
-            isDragging = false;
-            isResizing = false;
-            activeDragElement = null;
-            activeHandle = null;
-            vGuide.classList.add('hidden');
-            hGuide.classList.add('hidden');
         });
 
         let lastCsvFile = null;

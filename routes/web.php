@@ -5,7 +5,7 @@ use App\Http\Controllers\CertificateController; // Nama controller diubah!
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route('certificate.index');
 });
 
 // Hmph, perhatikan di sini! Kita satukan dashboard dan fitur piagam 
@@ -13,7 +13,7 @@ Route::get('/', function () {
 Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/dashboard', function() {
-        return view('dashboard');
+        return redirect()->route('certificate.index');
     })->name('dashboard');
 
     // Route untuk menampilkan halaman upload piagam
