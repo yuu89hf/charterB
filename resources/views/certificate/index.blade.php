@@ -73,15 +73,17 @@
             
             <div class="flex-grow bg-gray-200 rounded-xl relative overflow-hidden flex items-center justify-center p-10 border-2 border-dashed border-gray-300">
                 
-                <div id="v-guide" class="absolute left-1/2 top-0 bottom-0 w-0.5 bg-red-500 hidden z-10"></div>
-                <div id="h-guide" class="absolute top-1/2 left-0 right-0 h-0.5 bg-red-500 hidden z-10"></div>
-
                 <div id="canvas-container" class="relative shadow-2xl bg-white hidden">
                     <img id="preview-img" src="#" alt="Preview" class="max-w-full max-h-[70vh]">
                     
-                    <div id="draggable-name" class="absolute cursor-move px-2 py-1 bg-blue-500/20 border-2 border-blue-500 text-blue-700 font-bold whitespace-nowrap select-none" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">
-                        <span id="preview-name-text">Nama Penerima</span>
-                        <span class="block text-xs font-normal opacity-75">X: <span id="coord-x">50%</span>, Y: <span id="coord-y">50%</span></span>
+                    <div id="v-guide" class="absolute top-0 bottom-0 w-0.5 bg-red-500 hidden z-10"></div>
+                    <div id="h-guide" class="absolute left-0 right-0 h-0.5 bg-red-500 hidden z-10"></div>
+
+                    <div id="draggable-name" class="absolute cursor-move select-none text-center" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                        <div id="preview-name-text" class="px-3 py-1 bg-blue-500/20 border-2 border-blue-500 text-blue-700 font-bold whitespace-nowrap rounded">Nama Penerima</div>
+                        <div class="absolute left-1/2 -translate-x-1/2 top-full mt-1 bg-gray-900 text-white px-1.5 py-0.5 rounded shadow-md whitespace-nowrap pointer-events-none" style="font-size: 10px !important; font-family: sans-serif !important; font-weight: normal !important; line-height: 1 !important;">
+                            X: <span id="coord-x">50%</span>, Y: <span id="coord-y">50%</span>
+                        </div>
                     </div>
                 </div>
 
@@ -164,6 +166,13 @@
                                     <option value="TimesNewRoman">Times New Roman</option>
                                     <option value="Arial">Arial</option>
                                 </select>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="enable-snap" checked class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                    <span class="ml-2 text-sm text-gray-700 font-semibold">Aktifkan Snap Guide (Tiap 5%)</span>
+                                </label>
                             </div>
 
                             <hr class="my-6 border-gray-200">
@@ -350,8 +359,21 @@
             document.getElementById('input-y').value = '50';
         }
 
+        let lastTemplateFile = null;
         imgUpload.addEventListener('change', function(e) {
-            const file = e.target.files[0];
+            if (e.target.files.length > 0) {
+                lastTemplateFile = e.target.files[0];
+            } else if (lastTemplateFile) {
+                // Kembalikan file sebelumnya jika dibatalkan (cancel)
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(lastTemplateFile);
+                e.target.files = dataTransfer.files;
+                return;
+            } else {
+                return;
+            }
+
+            const file = lastTemplateFile;
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(event) {
@@ -384,9 +406,37 @@
             let x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
             let y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
 
-            const cx = rect.width / 2, cy = rect.height / 2, th = 15;
-            if (Math.abs(x - cx) < th) { x = cx; vGuide.classList.remove('hidden'); } else { vGuide.classList.add('hidden'); }
-            if (Math.abs(y - cy) < th) { y = cy; hGuide.classList.remove('hidden'); } else { hGuide.classList.add('hidden'); }
+            const enableSnap = document.getElementById('enable-snap').checked;
+            const threshold = 12; // toleransi piksel untuk snap
+
+            vGuide.classList.add('hidden');
+            hGuide.classList.add('hidden');
+
+            if (enableSnap) {
+                // Snap X ke kelipatan 5%
+                for (let i = 0; i <= 20; i++) {
+                    const snapPct = i * 5;
+                    const snapPx = (snapPct / 100) * rect.width;
+                    if (Math.abs(x - snapPx) < threshold) {
+                        x = snapPx;
+                        vGuide.style.left = snapPx + 'px';
+                        vGuide.classList.remove('hidden');
+                        break;
+                    }
+                }
+
+                // Snap Y ke kelipatan 5%
+                for (let i = 0; i <= 20; i++) {
+                    const snapPct = i * 5;
+                    const snapPx = (snapPct / 100) * rect.height;
+                    if (Math.abs(y - snapPx) < threshold) {
+                        y = snapPx;
+                        hGuide.style.top = snapPx + 'px';
+                        hGuide.classList.remove('hidden');
+                        break;
+                    }
+                }
+            }
 
             dragItem.style.left = x + 'px';
             dragItem.style.top  = y + 'px';
@@ -400,15 +450,87 @@
             document.getElementById('input-y').value = py;
         });
 
+        let isFocused = false;
+
+        // Fokuskan elemen saat diklik atau didrag
+        dragItem.addEventListener('mousedown', () => {
+            isFocused = true;
+            document.getElementById('preview-name-text').classList.add('ring-2', 'ring-blue-500', 'ring-offset-2');
+        });
+
+        // Hapus fokus jika mengklik di luar area teks
+        document.addEventListener('click', (e) => {
+            if (!dragItem.contains(e.target)) {
+                isFocused = false;
+                document.getElementById('preview-name-text').classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2');
+            }
+        });
+
+        // Kontrol menggunakan tombol Arrow (Panah) keyboard
+        document.addEventListener('keydown', (e) => {
+            if (!isFocused) return;
+
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                e.preventDefault(); // Cegah halaman scroll saat memindahkan teks
+            } else {
+                return;
+            }
+
+            const rect = container.getBoundingClientRect();
+            if (!rect.width || !rect.height) return;
+
+            // Dapatkan posisi pixel saat ini
+            let leftPx = parseFloat(dragItem.style.left) || (rect.width / 2);
+            let topPx = parseFloat(dragItem.style.top) || (rect.height / 2);
+
+            // Jarak perpindahan: 1px (tahan Shift untuk 10px agar lebih cepat)
+            const step = e.shiftKey ? 10 : 1;
+
+            if (e.key === 'ArrowLeft') {
+                leftPx = Math.max(0, leftPx - step);
+            } else if (e.key === 'ArrowRight') {
+                leftPx = Math.min(rect.width, leftPx + step);
+            } else if (e.key === 'ArrowUp') {
+                topPx = Math.max(0, topPx - step);
+            } else if (e.key === 'ArrowDown') {
+                topPx = Math.min(rect.height, topPx + step);
+            }
+
+            // Update posisi elemen
+            dragItem.style.left = leftPx + 'px';
+            dragItem.style.top  = topPx + 'px';
+
+            // Hitung ulang persentase koordinat
+            const px = ((leftPx / rect.width)  * 100).toFixed(2);
+            const py = ((topPx / rect.height) * 100).toFixed(2);
+
+            document.getElementById('coord-x').innerText = px + '%';
+            document.getElementById('coord-y').innerText = py + '%';
+            document.getElementById('input-x').value = px;
+            document.getElementById('input-y').value = py;
+        });
+
         document.addEventListener('mouseup', () => {
             isDragging = false;
             vGuide.classList.add('hidden');
             hGuide.classList.add('hidden');
         });
 
-        // ── CSV preview: hitung jumlah nama di kolom A ───────────────────────
+        let lastCsvFile = null;
         document.getElementById('csv-upload').addEventListener('change', function(e) {
-            const file = e.target.files[0];
+            if (e.target.files.length > 0) {
+                lastCsvFile = e.target.files[0];
+            } else if (lastCsvFile) {
+                // Kembalikan file sebelumnya jika dibatalkan (cancel)
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(lastCsvFile);
+                e.target.files = dataTransfer.files;
+                return;
+            } else {
+                return;
+            }
+
+            const file = lastCsvFile;
             if (!file) return;
             const reader = new FileReader();
             reader.onload = function(ev) {
