@@ -30,6 +30,9 @@ class CertificateController extends Controller
             'font_scale'       => 'required|numeric|min:25|max:300',
             'resolution_scale' => 'required|numeric|min:25|max:300',
             'font_family'      => 'nullable|string',
+            'row_start'        => 'nullable|integer|min:1',
+            'row_end'          => 'nullable|integer|min:1',
+            'row_exclude'      => 'nullable|string',
         ]);
 
         $template = $request->file('template');
@@ -40,6 +43,16 @@ class CertificateController extends Controller
         $format           = $request->input('format', 'png');
         $fontScale        = (float) $request->input('font_scale', 100);
         $resolutionScale  = (float) $request->input('resolution_scale', 100);
+
+        $rowStart = $request->input('row_start') ? (int) $request->input('row_start') : null;
+        $rowEnd   = $request->input('row_end') ? (int) $request->input('row_end') : null;
+        
+        $excludeInput = $request->input('row_exclude', '');
+        $excludeRows = [];
+        if (!empty(trim($excludeInput))) {
+            $excludeRows = preg_split('/[^0-9]+/', trim($excludeInput));
+            $excludeRows = array_map('intval', array_filter($excludeRows, 'strlen'));
+        }
 
         // ─── Baca CSV (Kolom A) ──────────────────────────────────────────────
         // Auto-skip baris pertama jika isinya "nama", "name", atau "no" (header)
@@ -59,7 +72,9 @@ class CertificateController extends Controller
             rewind($handle);
 
             $firstRow = true;
+            $rowNum = 0;
             while (($data = fgetcsv($handle, 0, $delimiter)) !== false) {
+                $rowNum++;
                 if (!isset($data[0]) || trim($data[0]) === '') {
                     continue;
                 }
@@ -75,13 +90,28 @@ class CertificateController extends Controller
                     }
                 }
 
+                // Filter berdasarkan baris awal (start row)
+                if ($rowStart !== null && $rowNum < $rowStart) {
+                    continue;
+                }
+
+                // Filter berdasarkan baris akhir (end row)
+                if ($rowEnd !== null && $rowNum > $rowEnd) {
+                    continue;
+                }
+
+                // Filter baris yang dikecualikan (exclude)
+                if (in_array($rowNum, $excludeRows)) {
+                    continue;
+                }
+
                 $names[] = $cellValue;
             }
             fclose($handle);
         }
 
         if (empty($names)) {
-            return back()->withErrors(['csv_file' => 'File CSV kosong atau tidak ada nama yang bisa dibaca di kolom A.']);
+            return back()->withErrors(['csv_file' => 'No names found in CSV matching the specified row range/exclusions.']);
         }
 
         // ─── Setup Image Manager ─────────────────────────────────────────────
