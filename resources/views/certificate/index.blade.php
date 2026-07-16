@@ -43,7 +43,7 @@
     </style>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Certificate Workspace') }}
+            {{ __('Workspace') }}
         </h2>
     </x-slot>
 
@@ -55,14 +55,14 @@
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
             </svg>
             <div>
-                <p class="font-bold text-gray-800 text-lg">Sedang memproses... <span id="progress-percent">0%</span></p>
+                <p class="font-bold text-gray-800 text-lg">Processing... <span id="progress-percent">0%</span></p>
                 
                 {{-- Progress Bar Container --}}
                 <div class="w-full bg-gray-200 rounded-full h-3 mt-4 overflow-hidden">
                     <div id="progress-bar-fill" class="bg-blue-600 h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
                 </div>
 
-                <p class="text-gray-500 text-sm mt-4">Semua sertifikat sedang di-generate dan dipaket ke ZIP.<br>Mohon tunggu, jangan tutup halaman ini.</p>
+                <p class="text-gray-500 text-sm mt-4">All certificates are being generated and packaged into a ZIP.<br>Please wait, do not close this page.</p>
             </div>
             <div id="loading-count" class="text-blue-600 font-semibold text-sm"></div>
         </div>
@@ -80,7 +80,7 @@
                     <div id="h-guide" class="absolute left-0 right-0 h-0.5 bg-red-500 hidden z-10"></div>
 
                     <div id="draggable-name" class="absolute cursor-move select-none text-center" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">
-                        <div id="preview-name-text" class="px-3 py-1 bg-blue-500/20 border-2 border-blue-500 text-blue-700 font-bold whitespace-nowrap rounded">Nama Penerima</div>
+                        <div id="preview-name-text" class="px-3 py-1 bg-blue-500/20 border-2 border-blue-500 text-blue-700 font-bold whitespace-nowrap rounded">Recipient Name</div>
                         <div class="absolute left-1/2 -translate-x-1/2 top-full mt-1 bg-gray-900 text-white px-1.5 py-0.5 rounded shadow-md whitespace-nowrap pointer-events-none" style="font-size: 10px !important; font-family: sans-serif !important; font-weight: normal !important; line-height: 1 !important;">
                             X: <span id="coord-x">50%</span>, Y: <span id="coord-y">50%</span>
                         </div>
@@ -88,7 +88,7 @@
                 </div>
 
                 <div id="placeholder-text" class="text-gray-500 text-center">
-                    <p class="text-lg font-semibold">Silahkan upload template di sidebar kanan</p>
+                    <p class="text-lg font-semibold">Please upload template in the right sidebar</p>
                 </div>
             </div>
 
@@ -101,12 +101,12 @@
                 <div id="sidebar" class="w-80 bg-white shadow-xl rounded-xl h-full transition-all duration-300 ease-in-out border-l border-gray-100 overflow-hidden">
                     
                     <div id="sidebar-content" class="p-6 h-full overflow-y-auto w-80">
-                        <h3 class="font-bold text-lg mb-4 text-gray-800">Pengaturan File</h3>
+                        <h3 class="font-bold text-lg mb-4 text-gray-800">File Settings</h3>
 
                         {{-- Tampilkan error validasi dari server --}}
                         @if ($errors->any())
                             <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-                                <p class="font-bold mb-1">⚠️ Terjadi kesalahan:</p>
+                                <p class="font-bold mb-1">⚠️ An error occurred:</p>
                                 <ul class="list-disc list-inside space-y-1">
                                     @foreach ($errors->all() as $error)
                                         <li>{{ $error }}</li>
@@ -125,7 +125,7 @@
                             @csrf
 
                             <div class="mb-4">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">1. Format Output</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">1. Output Format</label>
                                 <div class="flex items-center space-x-4">
                                     <label class="inline-flex items-center">
                                         <input type="radio" name="format" value="png" checked class="form-radio text-indigo-600">
@@ -139,13 +139,13 @@
                             </div>
 
                             <div class="mb-6">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">2. Upload Template</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">2. Template Upload</label>
                                 <input type="file" name="template" id="image-upload" accept="image/*" required
                                     class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
                             </div>
 
                             <div class="mb-4">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">3. Data Nama (CSV)</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">3. Names Data (CSV)</label>
                                 <input type="file" name="csv_file" id="csv-upload" accept=".csv,.txt" required
                                     class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100" />
                                 {{-- Preview info jumlah nama terdeteksi --}}
@@ -155,7 +155,7 @@
                             </div>
 
                             <div class="mb-4">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Font Bawaan</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Select Default Font</label>
                                 <select name="font_family" id="font-family" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
                                     <option value="Roboto-Bold" selected>Roboto (Modern Sans-Serif - Default)</option>
                                     <option value="Montserrat-Bold">Montserrat (Sleek Sans-Serif)</option>
@@ -171,7 +171,7 @@
                             <div class="mb-4">
                                 <label class="inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="enable-snap" checked class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                                    <span class="ml-2 text-sm text-gray-700 font-semibold">Aktifkan Snap Guide (Tiap 5%)</span>
+                                    <span class="ml-2 text-sm text-gray-700 font-semibold">Enable Snap Guide (Every 5%)</span>
                                 </label>
                             </div>
 
@@ -179,7 +179,7 @@
 
                             <div class="mb-6">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    4. Ukuran Font
+                                    4. Font Size
                                     <span id="font-scale-label" class="text-blue-600 font-bold">100%</span>
                                 </label>
                                 <input type="range" name="font_scale" id="font-scale" min="25" max="300" value="100" step="5"
@@ -190,14 +190,14 @@
                                     <span>300%</span>
                                 </div>
                                 <p class="text-xs text-gray-500 mt-2">
-                                    Ukuran dasar menyesuaikan resolusi template. Geser untuk memperkecil/memperbesar. Teks otomatis mengecil jika berisiko terpotong.
+                                    Base size scales with template resolution. Drag to resize. Text auto-shrinks if it risks clipping.
                                 </p>
                                 <p id="font-size-info" class="text-xs text-gray-400 mt-1 hidden"></p>
                             </div>
 
                             <div class="mb-6">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    5. Resolusi Output
+                                    5. Output Resolution
                                     <span id="resolution-scale-label" class="text-blue-600 font-bold">100%</span>
                                 </label>
                                 <input type="range" name="resolution_scale" id="resolution-scale" min="25" max="300" value="100" step="5"
@@ -208,7 +208,7 @@
                                     <span>300%</span>
                                 </div>
                                 <p class="text-xs text-gray-500 mt-2">
-                                    Kecilkan resolusi pixel agar file lebih ringan (mis. 2MB → ~500KB). Tidak mengubah posisi atau ukuran font di preview.
+                                    Reduce pixel resolution for lighter files (e.g. 2MB → ~500KB). Does not affect preview size or position.
                                 </p>
                                 <p id="resolution-info" class="text-xs text-gray-400 mt-1 hidden"></p>
                             </div>
@@ -321,7 +321,7 @@
 
             const { width, height } = getOutputDimensions();
             resolutionScaleLabel.textContent = resolutionScaleInput.value + '%';
-            resolutionInfo.textContent = 'Resolusi output: ' + width + ' × ' + height + 'px (asli ' + imageNaturalWidth + ' × ' + imageNaturalHeight + 'px)';
+            resolutionInfo.textContent = 'Output resolution: ' + width + ' × ' + height + 'px (original ' + imageNaturalWidth + ' × ' + imageNaturalHeight + 'px)';
             resolutionInfo.classList.remove('hidden');
         }
 
@@ -334,7 +334,7 @@
 
             dragItem.style.fontSize = previewSize + 'px';
             fontScaleLabel.textContent = fontScaleInput.value + '%';
-            fontSizeInfo.textContent = 'Ukuran font: ' + designSize + 'px (pada resolusi asli)';
+            fontSizeInfo.textContent = 'Font size: ' + designSize + 'px (at native resolution)';
             fontSizeInfo.classList.remove('hidden');
         }
 
@@ -549,34 +549,30 @@
                     }
                 }
 
+                let longestName = '';
                 lines.forEach((line, idx) => {
                     const parts = line.split(delimiter);
                     const cell = parts[0] ? parts[0].trim() : '';
                     if (!cell) return;
                     if (idx === 0 && skipWords.includes(cell.toLowerCase())) return; // skip header
                     count++;
+                    if (cell.length > longestName.length) {
+                        longestName = cell;
+                    }
                 });
                 const info = document.getElementById('csv-info');
                 const countEl = document.getElementById('csv-count');
                 if (count > 0) {
-                    countEl.textContent = '✅ Terdeteksi ' + count + ' nama di kolom A';
+                    countEl.textContent = '✅ Detected ' + count + ' names in column A';
                     info.classList.remove('hidden');
-                    document.getElementById('loading-count').textContent = 'Total: ' + count + ' sertifikat akan di-generate';
+                    document.getElementById('loading-count').textContent = 'Total: ' + count + ' certificates will be generated';
 
-                    const firstLine = lines.find((line, idx) => {
-                        const parts = line.split(delimiter);
-                        const cell = parts[0] ? parts[0].trim() : '';
-                        if (!cell) return false;
-                        if (idx === 0 && skipWords.includes(cell.toLowerCase())) return false;
-                        return true;
-                    });
-                    if (firstLine) {
-                        const parts = firstLine.split(delimiter);
-                        firstCsvName = parts[0].trim();
+                    if (longestName) {
+                        firstCsvName = longestName;
                         previewNameText.textContent = firstCsvName;
                     }
                 } else {
-                    countEl.textContent = '⚠️ Tidak ada nama terdeteksi di kolom A';
+                    countEl.textContent = '⚠️ No names detected in column A';
                     info.classList.remove('hidden');
                 }
                 updateFontFamilyPreview();
@@ -585,6 +581,7 @@
         });
 
         fontFamilySelect.addEventListener('change', updateFontFamilyPreview);
+
 
         // ── Show loading overlay on form submit (AJAX) ───────────────────────
         document.getElementById('generate-form').addEventListener('submit', function(e) {
@@ -648,7 +645,7 @@
             .then(async response => {
                 if (!response.ok) {
                     const errData = await response.json();
-                    throw new Error(errData.message || 'Gagal memproses pembuatan sertifikat.');
+                    throw new Error(errData.message || 'Failed to process certificate generation.');
                 }
                 return response.json();
             })

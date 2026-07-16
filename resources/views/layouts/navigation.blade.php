@@ -18,7 +18,7 @@
                     </x-nav-link>
 
                     <x-nav-link :href="route('certificate.index')" :active="request()->routeIs('certificate.*')">
-                        {{ __('Certificate Editor') }}
+                        {{ __('Workspace') }}
                     </x-nav-link>
                 </div>
             </div>
@@ -77,7 +77,7 @@
             </x-responsive-nav-link>
 
             <x-responsive-nav-link :href="route('certificate.index')" :active="request()->routeIs('certificate.*')">
-                {{ __('Certificate Editor') }}
+                {{ __('Workspace') }}
             </x-responsive-nav-link>
         </div>
 

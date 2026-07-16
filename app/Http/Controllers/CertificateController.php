@@ -147,9 +147,9 @@ class CertificateController extends Controller
                 $image = $image->scale(width: $outputWidth);
             }
 
-            // Nama file di dalam ZIP = nama dari CSV (spasi → underscore, karakter aneh dihapus)
-            $safeName = preg_replace('/[^A-Za-z0-9\-]/', '_', $name);
-            $safeName = preg_replace('/_+/', '_', trim($safeName, '_')); // rapikan underscore ganda
+            // Nama file di dalam ZIP = nama dari CSV (karakter aneh dihapus, spasi dipertahankan)
+            $safeName = preg_replace('/[^A-Za-z0-9\-\s]/', '', $name);
+            $safeName = preg_replace('/\s+/', ' ', trim($safeName)); // rapikan spasi ganda
 
             // Fallback jika nama kosong (misal berisi huruf non-latin seperti Arab/Mandarin, atau emoji)
             if ($safeName === '') {
