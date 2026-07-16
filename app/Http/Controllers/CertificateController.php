@@ -27,7 +27,7 @@ class CertificateController extends Controller
             'csv_file'         => 'required|file|mimes:csv,txt,xlsx,xls',
             'x_pos'            => 'required|numeric',
             'y_pos'            => 'required|numeric',
-            'format'           => 'required|in:png,jpg,pdf',
+            'format'           => 'required|in:png,jpg',
             'font_scale'       => 'required|numeric|min:25|max:300',
             'resolution_scale' => 'required|numeric|min:25|max:300',
             'font_family'      => 'nullable|string',
@@ -135,7 +135,6 @@ class CertificateController extends Controller
         $baseFontSize      = $this->calculateBaseFontSize($originalWidth);
         $requestedSize     = (int) round($baseFontSize * ($fontScale / 100));
         $outputWidth       = max(100, (int) round($originalWidth * ($resolutionScale / 100)));
-        $outputHeight      = max(100, (int) round($originalHeight * ($resolutionScale / 100)));
 
         // ─── Buat file ZIP di folder temp sistem ─────────────────────────────
         $zipName = 'sertifikat_' . time() . '.zip';
@@ -195,23 +194,6 @@ class CertificateController extends Controller
             if ($format === 'jpg') {
                 $encodedImage = $image->encodeUsingFileExtension('jpg');
                 $zip->addFromString($safeName . '.jpg', (string) $encodedImage);
-            } elseif ($format === 'pdf') {
-                // Konversi px ke pt (1 px = 0.75 pt) agar dimensi PDF pas dengan rasio gambar
-                $widthPt = $outputWidth * 0.75;
-                $heightPt = $outputHeight * 0.75;
-                $orientation = $widthPt > $heightPt ? 'L' : 'P';
-                
-                $pdf = new \FPDF($orientation, 'pt', [$widthPt, $heightPt]);
-                $pdf->AddPage();
-                
-                // Simpan image ke file temp untuk diproses FPDF
-                $tempImg = tempnam(sys_get_temp_dir(), 'cert_');
-                file_put_contents($tempImg, (string) $image->encodeUsingFileExtension('jpg'));
-                
-                $pdf->Image($tempImg, 0, 0, $widthPt, $heightPt, 'JPG');
-                unlink($tempImg);
-                
-                $zip->addFromString($safeName . '.pdf', $pdf->Output('S'));
             } else {
                 $encodedImage = $image->encodeUsingFileExtension('png');
                 $zip->addFromString($safeName . '.png', (string) $encodedImage);
