@@ -105,11 +105,6 @@ class CertificateController extends Controller
                     continue;
                 }
 
-                // Cek nama duplikat (abaikan jika sudah pernah ditambahkan)
-                if (in_array($cellValue, $names)) {
-                    continue;
-                }
-
                 $names[] = $cellValue;
             }
             fclose($handle);

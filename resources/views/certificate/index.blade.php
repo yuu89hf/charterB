@@ -131,13 +131,14 @@
                                 <div class="mb-4">
                                     <label class="block text-xs font-semibold text-gray-600 mb-1">1.1 Template Upload</label>
                                     <span class="block text-[10px] text-gray-400 mb-1.5">Supported: PNG, JPG, JPEG, WebP</span>
-                                    <input type="file" name="template" id="image-upload" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" required
+                                    <input type="file" name="template" id="image-upload" accept=".png,.jpg,.jpeg,.webp" required
                                         class="block w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3.5 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" />
                                 </div>
 
                                 <div class="mb-4">
-                                    <label class="block text-xs font-semibold text-gray-600 mb-2">1.2 Names Data (CSV)</label>
-                                    <input type="file" name="csv_file" id="csv-upload" accept=".csv,.txt" required
+                                    <label class="block text-xs font-semibold text-gray-600 mb-1">1.2 Names Data (CSV / Excel)</label>
+                                    <span class="block text-[10px] text-gray-400 mb-1.5">Supported: CSV, XLSX, XLS</span>
+                                    <input type="file" name="csv_file" id="csv-upload" accept=".csv,.xlsx,.xls" required
                                         class="block w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3.5 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 cursor-pointer" />
                                     {{-- Preview info jumlah nama terdeteksi --}}
                                     <div id="csv-info" class="mt-2 text-xs text-gray-500 hidden">
@@ -588,31 +589,25 @@
                     }
                 }
 
-                const seenNames = new Set();
-                const duplicates = new Set();
-                let count = 0;
                 let longestName = '';
-
                 lines.forEach((line, idx) => {
                     const parts = line.split(delimiter);
                     const cell = parts[0] ? parts[0].trim() : '';
                     if (!cell) return;
                     if (idx === 0 && skipWords.includes(cell.toLowerCase())) return; // skip header
-
-                    if (seenNames.has(cell)) {
-                        duplicates.add(cell);
-                    } else {
-                        seenNames.add(cell);
-                        count++;
-                        if (cell.length > longestName.length) {
-                            longestName = cell;
-                        }
+                    count++;
+                    if (cell.length > longestName.length) {
+                        longestName = cell;
                     }
                 });
                 const info = document.getElementById('csv-info');
                 const countEl = document.getElementById('csv-count');
                 if (count > 0) {
-                    countEl.textContent = '✅ Detected ' + count + ' names in column A';
+                    let msg = '✅ Detected ' + count + ' unique names in Column A';
+                    if (duplicates.size > 0) {
+                        msg += ' <br><span class="text-amber-600 font-medium">⚠️ Duplicate names ignored (' + duplicates.size + '): ' + Array.from(duplicates).slice(0, 5).join(', ') + (duplicates.size > 5 ? '...' : '') + '</span>';
+                    }
+                    countEl.innerHTML = msg;
                     info.classList.remove('hidden');
                     document.getElementById('loading-count').textContent = 'Total: ' + count + ' certificates will be generated';
 
@@ -628,6 +623,63 @@
             };
             reader.readAsText(file);
         });
+
+        function parseExcel(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    
+                    // Convert sheet ke array of arrays untuk mengambil Kolom A
+                    const rows = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
+                    const skipWords = ['nama','name','no','no.','nomor','number'];
+                    const seenNames = new Set();
+                    const duplicates = new Set();
+                    let count = 0;
+                    let longestName = '';
+
+                    rows.forEach((row, idx) => {
+                        const cell = row[0] ? String(row[0]).trim() : '';
+                        if (!cell) return;
+                        if (idx === 0 && skipWords.includes(cell.toLowerCase())) return;
+                        
+                        if (seenNames.has(cell)) {
+                            duplicates.add(cell);
+                        } else {
+                            seenNames.add(cell);
+                            count++;
+                            if (cell.length > longestName.length) {
+                                longestName = cell;
+                            }
+                        }
+                    });
+
+                    const info = document.getElementById('csv-info');
+                    const countEl = document.getElementById('csv-count');
+                    if (count > 0) {
+                        let msg = '✅ Detected ' + count + ' unique names in Column A';
+                        if (duplicates.size > 0) {
+                            msg += ' <br><span class="text-amber-600 font-medium">⚠️ Duplicate names ignored (' + duplicates.size + '): ' + Array.from(duplicates).slice(0, 5).join(', ') + (duplicates.size > 5 ? '...' : '') + '</span>';
+                        }
+                        countEl.innerHTML = msg;
+                        document.getElementById('loading-count').textContent = 'Total: ' + count + ' certificates will be generated';
+                        if (longestName) {
+                            firstCsvName = longestName;
+                            previewNameText.textContent = firstCsvName;
+                        }
+                    } else {
+                        countEl.textContent = '⚠️ No names detected in Column A';
+                    }
+                    updateFontFamilyPreview();
+                } catch (err) {
+                    console.error(err);
+                    document.getElementById('csv-count').textContent = '⚠️ Error reading Excel file';
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
 
         fontFamilySelect.addEventListener('change', updateFontFamilyPreview);
 
@@ -665,7 +717,7 @@
             const startPolling = () => {
                 pollInterval = setInterval(async () => {
                     try {
-                        const response = await fetch(`/workspace/progress/${progressId}`);
+                        const response = await fetch(`/certificate/progress/${progressId}`);
                         if (response.ok) {
                             const data = await response.json();
                             const progress = data.progress || 0;
