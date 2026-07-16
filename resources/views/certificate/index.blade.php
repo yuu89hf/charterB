@@ -229,6 +229,10 @@
                                             <input type="radio" name="format" value="jpg" class="form-radio text-orange-500 focus:ring-orange-400">
                                             <span class="ml-2 text-xs text-gray-600 font-medium">JPG</span>
                                         </label>
+                                        <label class="inline-flex items-center cursor-pointer">
+                                            <input type="radio" name="format" value="pdf" class="form-radio text-orange-500 focus:ring-orange-400">
+                                            <span class="ml-2 text-xs text-gray-600 font-medium">PDF</span>
+                                        </label>
                                     </div>
                                 </div>
 
