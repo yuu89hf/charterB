@@ -1,4 +1,5 @@
 <x-app-layout>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         @font-face {
             font-family: 'Roboto-Bold';
@@ -73,18 +74,27 @@
             
             <div class="flex-grow bg-gray-200 rounded-xl relative overflow-hidden flex items-center justify-center p-10 border-2 border-dashed border-gray-300">
                 
-                <div id="canvas-container" class="relative shadow-2xl bg-white hidden">
-                    <img id="preview-img" src="#" alt="Preview" class="max-w-full max-h-[70vh]">
-                    
-                    <div id="v-guide" class="absolute top-0 bottom-0 w-0.5 bg-red-500 hidden z-10"></div>
-                    <div id="h-guide" class="absolute left-0 right-0 h-0.5 bg-red-500 hidden z-10"></div>
+                <div id="canvas-container" class="relative shadow-2xl bg-white hidden overflow-hidden select-none">
+                    <!-- Draggable Image Wrapper -->
+                    <div id="draggable-image-wrapper" class="absolute cursor-move select-none" style="left: 0px; top: 0px; width: 100%; height: 100%;">
+                        <img id="preview-img" src="#" alt="Preview" class="w-full h-full object-fill pointer-events-none">
+                        
+                        <!-- Canva-style Corner Resize Handles -->
+                        <div class="resize-handle absolute w-3 h-3 bg-white border border-blue-600 rounded-full cursor-nwse-resize z-20 -top-1.5 -left-1.5 hover:scale-125 transition-transform" data-handle="tl"></div>
+                        <div class="resize-handle absolute w-3 h-3 bg-white border border-blue-600 rounded-full cursor-nesw-resize z-20 -top-1.5 -right-1.5 hover:scale-125 transition-transform" data-handle="tr"></div>
+                        <div class="resize-handle absolute w-3 h-3 bg-white border border-blue-600 rounded-full cursor-nesw-resize z-20 -bottom-1.5 -left-1.5 hover:scale-125 transition-transform" data-handle="bl"></div>
+                        <div class="resize-handle absolute w-3 h-3 bg-white border border-blue-600 rounded-full cursor-nwse-resize z-20 -bottom-1.5 -right-1.5 hover:scale-125 transition-transform" data-handle="br"></div>
 
-                    <div id="draggable-name" class="absolute cursor-move select-none text-center" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">
-                        <div id="preview-name-text" class="px-3 py-1 bg-blue-500/20 border-2 border-blue-500 text-blue-700 font-bold whitespace-nowrap rounded">Recipient Name</div>
-                        <div class="absolute left-1/2 -translate-x-1/2 top-full mt-1 bg-gray-900 text-white px-1.5 py-0.5 rounded shadow-md whitespace-nowrap pointer-events-none" style="font-size: 10px !important; font-family: sans-serif !important; font-weight: normal !important; line-height: 1 !important;">
-                            X: <span id="coord-x">50%</span>, Y: <span id="coord-y">50%</span>
+                        <div id="draggable-name" class="absolute cursor-move select-none text-center" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                            <div id="preview-name-text" class="px-3 py-1 bg-blue-500/20 border-2 border-blue-500 text-blue-700 font-bold whitespace-nowrap rounded">Recipient Name</div>
+                            <div class="absolute left-1/2 -translate-x-1/2 top-full mt-1 bg-gray-900 text-white px-1.5 py-0.5 rounded shadow-md whitespace-nowrap pointer-events-none" style="font-size: 10px !important; font-family: sans-serif !important; font-weight: normal !important; line-height: 1 !important;">
+                                X: <span id="coord-x">50%</span>, Y: <span id="coord-y">50%</span>
+                            </div>
                         </div>
                     </div>
+                    
+                    <div id="v-guide" class="absolute top-0 bottom-0 w-0.5 bg-red-500 hidden z-10 pointer-events-none"></div>
+                    <div id="h-guide" class="absolute left-0 right-0 h-0.5 bg-red-500 hidden z-10 pointer-events-none"></div>
                 </div>
 
                 <div id="placeholder-text" class="text-gray-500 text-center">
@@ -229,6 +239,77 @@
                                             <input type="radio" name="format" value="jpg" class="form-radio text-orange-500 focus:ring-orange-400">
                                             <span class="ml-2 text-xs text-gray-600 font-medium">JPG</span>
                                         </label>
+                                        <label class="inline-flex items-center cursor-pointer">
+                                            <input type="radio" name="format" value="pdf" class="form-radio text-orange-500 focus:ring-orange-400">
+                                            <span class="ml-2 text-xs text-gray-600 font-medium">PDF</span>
+                                        </label>
+                                    </div>
+
+                                    <!-- PDF Paper Options Container -->
+                                    <div id="pdf-paper-options" class="hidden mt-3 p-3 bg-orange-50/50 rounded-lg border border-orange-100">
+                                        <div class="mb-3">
+                                            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Use Paper Size</label>
+                                            <div class="flex items-center space-x-4">
+                                                <label class="inline-flex items-center cursor-pointer">
+                                                    <input type="radio" name="use_paper" value="n" checked class="form-radio text-orange-500 focus:ring-orange-400">
+                                                    <span class="ml-2 text-xs text-gray-600 font-medium">No</span>
+                                                </label>
+                                                <label class="inline-flex items-center cursor-pointer">
+                                                    <input type="radio" name="use_paper" value="y" class="form-radio text-orange-500 focus:ring-orange-400">
+                                                    <span class="ml-2 text-xs text-gray-600 font-medium">Yes</span>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div id="paper-size-container" class="hidden mb-1">
+                                            <div class="mb-3">
+                                                <label class="block text-xs font-semibold text-gray-600 mb-1.5">Paper Size</label>
+                                                <select name="paper_size" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-xs py-1.5 px-2.5">
+                                                    <option value="A4" selected>A4: 21 x 29.7 cm (Most popular & practical)</option>
+                                                    <option value="F4">F4 (Folio): 21 x 33 cm</option>
+                                                </select>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label class="block text-xs font-semibold text-gray-600 mb-1.5">Paper Orientation</label>
+                                                <div class="flex items-center space-x-4">
+                                                    <label class="inline-flex items-center cursor-pointer">
+                                                        <input type="radio" name="paper_orientation" value="auto" checked class="form-radio text-orange-500 focus:ring-orange-400">
+                                                        <span class="ml-2 text-xs text-gray-600 font-medium">Auto</span>
+                                                    </label>
+                                                    <label class="inline-flex items-center cursor-pointer">
+                                                        <input type="radio" name="paper_orientation" value="L" class="form-radio text-orange-500 focus:ring-orange-400">
+                                                        <span class="ml-2 text-xs text-gray-600 font-medium">Landscape</span>
+                                                    </label>
+                                                    <label class="inline-flex items-center cursor-pointer">
+                                                        <input type="radio" name="paper_orientation" value="P" class="form-radio text-orange-500 focus:ring-orange-400">
+                                                        <span class="ml-2 text-xs text-gray-600 font-medium">Portrait</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label class="block text-xs font-semibold text-gray-600 mb-1.5">Image Layout Mode</label>
+                                                <div class="flex items-center space-x-4">
+                                                    <label class="inline-flex items-center cursor-pointer">
+                                                        <input type="radio" name="fit_mode" value="full" checked class="form-radio text-orange-500 focus:ring-orange-400">
+                                                        <span class="ml-2 text-xs text-gray-600 font-medium">Full Page</span>
+                                                    </label>
+                                                    <label class="inline-flex items-center cursor-pointer">
+                                                        <input type="radio" name="fit_mode" value="smaller" class="form-radio text-orange-500 focus:ring-orange-400">
+                                                        <span class="ml-2 text-xs text-gray-600 font-medium">Custom (Canva Mode)</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+
+                                            <div id="image-scale-container" class="hidden mb-1 bg-white p-2.5 rounded border border-orange-100">
+                                                <label class="block text-[11px] font-semibold text-gray-500 mb-1">
+                                                    Image Scale: <span id="img-scale-val" class="text-orange-500 font-bold">100%</span>
+                                                </label>
+                                                <input type="range" id="img-scale-slider" min="10" max="100" value="100" step="1" class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500">
+                                                <p class="text-[9px] text-gray-400 mt-1">Scale template image relative to the paper canvas.</p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -254,6 +335,12 @@
                             <input type="hidden" name="x_pos" id="input-x" value="50">
                             <input type="hidden" name="y_pos" id="input-y" value="50">
                             <input type="hidden" name="progress_id" id="input-progress-id" value="">
+                            
+                            <!-- Draggable Image wrapper position metrics (percentages relative to canvas-container) -->
+                            <input type="hidden" name="img_x" id="input-img-x" value="0">
+                            <input type="hidden" name="img_y" id="input-img-y" value="0">
+                            <input type="hidden" name="img_w" id="input-img-w" value="100">
+                            <input type="hidden" name="img_h" id="input-img-h" value="100">
 
                             <button id="submit-btn" type="submit"
                                 class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition shadow-md flex items-center justify-center gap-2">
@@ -382,10 +469,169 @@
             updateFontFamilyPreview();
         }
 
+        const imgWrapper = document.getElementById('draggable-image-wrapper');
+        const imgScaleSlider = document.getElementById('img-scale-slider');
+        const imgScaleVal = document.getElementById('img-scale-val');
+
+        let imgScalePercent = 100;
+        let imgXPercent = 0;
+        let imgYPercent = 0;
+        let imgWPercent = 100;
+        let imgHPercent = 100;
+
+        function isUsePaper() {
+            const el = document.querySelector('input[name="use_paper"]:checked');
+            return el && el.value === 'y';
+        }
+
+        function isFitModeCustom() {
+            const el = document.querySelector('input[name="fit_mode"]:checked');
+            return el && el.value === 'smaller';
+        }
+
+        function updateCanvasContainerSize() {
+            if (!imageNaturalWidth) return;
+
+            if (isUsePaper()) {
+                const paperSize = document.querySelector('select[name="paper_size"]').value;
+                let orientation = document.querySelector('input[name="paper_orientation"]:checked')?.value || 'auto';
+                if (orientation === 'auto') {
+                    orientation = imageNaturalWidth > imageNaturalHeight ? 'L' : 'P';
+                }
+
+                let ratio = 1.4142; 
+                if (paperSize === 'A4') {
+                    ratio = orientation === 'L' ? (29.7 / 21) : (21 / 29.7);
+                } else if (paperSize === 'F4') {
+                    ratio = orientation === 'L' ? (33 / 21) : (21 / 33);
+                }
+
+                const maxCanvasHeight = 450;
+                const maxCanvasWidth = 650;
+
+                let canvasHeight = maxCanvasHeight;
+                let canvasWidth = canvasHeight * ratio;
+
+                if (canvasWidth > maxCanvasWidth) {
+                    canvasWidth = maxCanvasWidth;
+                    canvasHeight = canvasWidth / ratio;
+                }
+
+                container.style.width = Math.round(canvasWidth) + 'px';
+                container.style.height = Math.round(canvasHeight) + 'px';
+                container.style.backgroundColor = '#ffffff'; 
+                container.style.display = 'block'; 
+            } else {
+                const maxCanvasHeight = 450;
+                const maxCanvasWidth = 650;
+                const ratio = imageNaturalWidth / imageNaturalHeight;
+
+                let canvasHeight = maxCanvasHeight;
+                let canvasWidth = canvasHeight * ratio;
+
+                if (canvasWidth > maxCanvasWidth) {
+                    canvasWidth = maxCanvasWidth;
+                    canvasHeight = canvasWidth / ratio;
+                }
+
+                container.style.width = Math.round(canvasWidth) + 'px';
+                container.style.height = Math.round(canvasHeight) + 'px';
+                container.style.backgroundColor = 'transparent';
+                container.style.display = 'block';
+            }
+        }
+
+        function centerImageLayer() {
+            if (!imageNaturalWidth) return;
+            const canvasW = container.clientWidth;
+            const canvasH = container.clientHeight;
+            if (!canvasW || !canvasH) return;
+
+            const imgRatio = imageNaturalWidth / imageNaturalHeight;
+            const canvasRatio = canvasW / canvasH;
+
+            let baseW = canvasW;
+            let baseH = canvasH;
+
+            if (imgRatio > canvasRatio) {
+                baseW = canvasW;
+                baseH = canvasW / imgRatio;
+            } else {
+                baseH = canvasH;
+                baseW = canvasH * imgRatio;
+            }
+
+            const scale = parseFloat(imgScaleSlider.value) / 100;
+            const finalW = baseW * scale;
+            const finalH = baseH * scale;
+
+            const leftPx = (canvasW - finalW) / 2;
+            const topPx = (canvasH - finalH) / 2;
+
+            imgXPercent = (leftPx / canvasW) * 100;
+            imgYPercent = (topPx / canvasH) * 100;
+        }
+
+        function updateImageLayerPositionAndSize() {
+            if (!imageNaturalWidth) return;
+
+            const canvasW = container.clientWidth;
+            const canvasH = container.clientHeight;
+            if (!canvasW || !canvasH) return;
+
+            if (!isUsePaper() || !isFitModeCustom()) {
+                imgWrapper.style.left = '0px';
+                imgWrapper.style.top = '0px';
+                imgWrapper.style.width = '100%';
+                imgWrapper.style.height = '100%';
+                
+                document.getElementById('input-img-x').value = '0';
+                document.getElementById('input-img-y').value = '0';
+                document.getElementById('input-img-w').value = '100';
+                document.getElementById('input-img-h').value = '100';
+                return;
+            }
+
+            const imgRatio = imageNaturalWidth / imageNaturalHeight;
+            const canvasRatio = canvasW / canvasH;
+
+            let baseW = canvasW;
+            let baseH = canvasH;
+
+            if (imgRatio > canvasRatio) {
+                baseW = canvasW;
+                baseH = canvasW / imgRatio;
+            } else {
+                baseH = canvasH;
+                baseW = canvasH * imgRatio;
+            }
+
+            const scale = parseFloat(imgScaleSlider.value) / 100;
+            const finalW = baseW * scale;
+            const finalH = baseH * scale;
+
+            let leftPx = (imgXPercent / 100) * canvasW;
+            let topPx = (imgYPercent / 100) * canvasH;
+
+            imgWrapper.style.width = Math.round(finalW) + 'px';
+            imgWrapper.style.height = Math.round(finalH) + 'px';
+            imgWrapper.style.left = Math.round(leftPx) + 'px';
+            imgWrapper.style.top = Math.round(topPx) + 'px';
+
+            imgWPercent = (finalW / canvasW) * 100;
+            imgHPercent = (finalH / canvasH) * 100;
+
+            document.getElementById('input-img-x').value = imgXPercent.toFixed(4);
+            document.getElementById('input-img-y').value = imgYPercent.toFixed(4);
+            document.getElementById('input-img-w').value = imgWPercent.toFixed(4);
+            document.getElementById('input-img-h').value = imgHPercent.toFixed(4);
+        }
+
         function positionTextAtCenter() {
-            const rect = container.getBoundingClientRect();
-            const x = rect.width / 2;
-            const y = rect.height / 2;
+            const w = imgWrapper.clientWidth || 300;
+            const h = imgWrapper.clientHeight || 200;
+            const x = w / 2;
+            const y = h / 2;
 
             dragItem.style.left = x + 'px';
             dragItem.style.top = y + 'px';
@@ -402,7 +648,6 @@
             if (e.target.files.length > 0) {
                 lastTemplateFile = e.target.files[0];
             } else if (lastTemplateFile) {
-                // Kembalikan file sebelumnya jika dibatalkan (cancel)
                 const dataTransfer = new DataTransfer();
                 dataTransfer.items.add(lastTemplateFile);
                 e.target.files = dataTransfer.files;
@@ -413,7 +658,6 @@
 
             const file = lastTemplateFile;
             if (file) {
-                // Hapus URL objek lama jika ada untuk mencegah memory leak
                 if (previewImg.src && previewImg.src.startsWith('blob:')) {
                     URL.revokeObjectURL(previewImg.src);
                 }
@@ -423,6 +667,10 @@
                     imageNaturalHeight = previewImg.naturalHeight;
                     document.getElementById('canvas-container').classList.remove('hidden');
                     document.getElementById('placeholder-text').classList.add('hidden');
+                    
+                    updateCanvasContainerSize();
+                    centerImageLayer();
+                    updateImageLayerPositionAndSize();
                     positionTextAtCenter();
                     updatePreview();
                 };
@@ -433,71 +681,260 @@
         fontScaleInput.addEventListener('input', updateFontPreview);
         resolutionScaleInput.addEventListener('input', updateResolutionInfo);
 
-        window.addEventListener('resize', updateFontPreview);
+        window.addEventListener('resize', () => {
+            updateCanvasContainerSize();
+            updateImageLayerPositionAndSize();
+            updateFontPreview();
+        });
         previewImg.addEventListener('load', updatePreview);
 
         let isDragging = false;
-        dragItem.addEventListener('mousedown', () => { isDragging = true; dragItem.style.zIndex = 100; });
+        let isResizing = false;
+        let activeDragElement = null;
+        let activeHandle = null;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let elementStartX = 0;
+        let elementStartY = 0;
+        let resizeStartW = 0;
+        let resizeStartH = 0;
+        let resizeStartLeft = 0;
+        let resizeStartTop = 0;
 
-        document.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            const rect = container.getBoundingClientRect();
-            let x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-            let y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
-
-            const enableSnap = document.getElementById('enable-snap').checked;
-            const threshold = 12; // toleransi piksel untuk snap
-
-            vGuide.classList.add('hidden');
-            hGuide.classList.add('hidden');
-
-            if (enableSnap) {
-                // Snap X ke kelipatan 5%
-                for (let i = 0; i <= 20; i++) {
-                    const snapPct = i * 5;
-                    const snapPx = (snapPct / 100) * rect.width;
-                    if (Math.abs(x - snapPx) < threshold) {
-                        x = snapPx;
-                        vGuide.style.left = snapPx + 'px';
-                        vGuide.classList.remove('hidden');
-                        break;
-                    }
-                }
-
-                // Snap Y ke kelipatan 5%
-                for (let i = 0; i <= 20; i++) {
-                    const snapPct = i * 5;
-                    const snapPx = (snapPct / 100) * rect.height;
-                    if (Math.abs(y - snapPx) < threshold) {
-                        y = snapPx;
-                        hGuide.style.top = snapPx + 'px';
-                        hGuide.classList.remove('hidden');
-                        break;
-                    }
-                }
-            }
-
-            dragItem.style.left = x + 'px';
-            dragItem.style.top  = y + 'px';
-            dragItem.style.transform = 'translate(-50%, -50%)';
-
-            const px = ((x / rect.width)  * 100).toFixed(2);
-            const py = ((y / rect.height) * 100).toFixed(2);
-            document.getElementById('coord-x').innerText = px + '%';
-            document.getElementById('coord-y').innerText = py + '%';
-            document.getElementById('input-x').value = px;
-            document.getElementById('input-y').value = py;
+        // Register handle mousedowns
+        document.querySelectorAll('.resize-handle').forEach(handle => {
+            handle.addEventListener('mousedown', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                isResizing = true;
+                activeHandle = handle.dataset.handle;
+                
+                dragStartX = e.clientX;
+                dragStartY = e.clientY;
+                resizeStartW = imgWrapper.clientWidth;
+                resizeStartH = imgWrapper.clientHeight;
+                resizeStartLeft = imgWrapper.offsetLeft;
+                resizeStartTop = imgWrapper.offsetTop;
+            });
         });
 
-        let isFocused = false;
+        dragItem.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+            activeDragElement = dragItem;
+            isDragging = true;
+            dragItem.style.zIndex = 100;
+            
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+            elementStartX = dragItem.offsetLeft;
+            elementStartY = dragItem.offsetTop;
 
-        // Fokuskan elemen saat diklik atau didrag
-        dragItem.addEventListener('mousedown', () => {
             isFocused = true;
             document.getElementById('preview-name-text').classList.add('ring-2', 'ring-blue-500', 'ring-offset-2');
         });
 
-        // Hapus fokus jika mengklik di luar area teks
+        imgWrapper.addEventListener('mousedown', (e) => {
+            if (!isUsePaper() || !isFitModeCustom()) return;
+            activeDragElement = imgWrapper;
+            isDragging = true;
+
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+            elementStartX = imgWrapper.offsetLeft;
+            elementStartY = imgWrapper.offsetTop;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isResizing) {
+                const deltaX = e.clientX - dragStartX;
+                const deltaY = e.clientY - dragStartY;
+                
+                const canvasW = container.clientWidth;
+                const canvasH = container.clientHeight;
+                const imgRatio = imageNaturalWidth / imageNaturalHeight;
+
+                let newW = resizeStartW;
+                let newH = resizeStartH;
+                let newLeft = resizeStartLeft;
+                let newTop = resizeStartTop;
+
+                if (activeHandle === 'br') {
+                    newW = Math.max(50, resizeStartW + deltaX);
+                    newH = newW / imgRatio;
+                } else if (activeHandle === 'bl') {
+                    newW = Math.max(50, resizeStartW - deltaX);
+                    newH = newW / imgRatio;
+                    newLeft = resizeStartLeft + (resizeStartW - newW);
+                } else if (activeHandle === 'tr') {
+                    newW = Math.max(50, resizeStartW + deltaX);
+                    newH = newW / imgRatio;
+                    newTop = resizeStartTop + (resizeStartH - newH);
+                } else if (activeHandle === 'tl') {
+                    newW = Math.max(50, resizeStartW - deltaX);
+                    newH = newW / imgRatio;
+                    newLeft = resizeStartLeft + (resizeStartW - newW);
+                    newTop = resizeStartTop + (resizeStartH - newH);
+                }
+
+                if (newW > 0 && newH > 0) {
+                    imgWrapper.style.width = Math.round(newW) + 'px';
+                    imgWrapper.style.height = Math.round(newH) + 'px';
+                    imgWrapper.style.left = Math.round(newLeft) + 'px';
+                    imgWrapper.style.top = Math.round(newTop) + 'px';
+
+                    imgXPercent = (newLeft / canvasW) * 100;
+                    imgYPercent = (newTop / canvasH) * 100;
+                    imgWPercent = (newW / canvasW) * 100;
+                    imgHPercent = (newH / canvasH) * 100;
+
+                    const canvasRatio = canvasW / canvasH;
+                    let fitBaseW = canvasW;
+                    if (imgRatio > canvasRatio) {
+                        fitBaseW = canvasW;
+                    } else {
+                        fitBaseW = canvasH * imgRatio;
+                    }
+                    const computedScale = Math.round((newW / fitBaseW) * 100);
+                    imgScaleSlider.value = Math.max(10, Math.min(100, computedScale));
+                    imgScaleVal.innerText = imgScaleSlider.value + '%';
+
+                    document.getElementById('input-img-x').value = imgXPercent.toFixed(4);
+                    document.getElementById('input-img-y').value = imgYPercent.toFixed(4);
+                    document.getElementById('input-img-w').value = imgWPercent.toFixed(4);
+                    document.getElementById('input-img-h').value = imgHPercent.toFixed(4);
+
+                    updateFontPreview();
+                }
+                return;
+            }
+
+            if (!isDragging || !activeDragElement) return;
+
+            const deltaX = e.clientX - dragStartX;
+            const deltaY = e.clientY - dragStartY;
+
+            if (activeDragElement === dragItem) {
+                const rect = imgWrapper.getBoundingClientRect();
+                let x = Math.max(0, Math.min(elementStartX + deltaX, rect.width));
+                let y = Math.max(0, Math.min(elementStartY + deltaY, rect.height));
+
+                const enableSnap = document.getElementById('enable-snap').checked;
+                const threshold = 12;
+
+                vGuide.classList.add('hidden');
+                hGuide.classList.add('hidden');
+
+                if (enableSnap) {
+                    for (let i = 0; i <= 20; i++) {
+                        const snapPct = i * 5;
+                        const snapPx = (snapPct / 100) * rect.width;
+                        if (Math.abs(x - snapPx) < threshold) {
+                            x = snapPx;
+                            const canvasRect = container.getBoundingClientRect();
+                            vGuide.style.left = (rect.left - canvasRect.left + snapPx) + 'px';
+                            vGuide.classList.remove('hidden');
+                            break;
+                        }
+                    }
+
+                    for (let i = 0; i <= 20; i++) {
+                        const snapPct = i * 5;
+                        const snapPx = (snapPct / 100) * rect.height;
+                        if (Math.abs(y - snapPx) < threshold) {
+                            y = snapPx;
+                            const canvasRect = container.getBoundingClientRect();
+                            hGuide.style.top = (rect.top - canvasRect.top + snapPx) + 'px';
+                            hGuide.classList.remove('hidden');
+                            break;
+                        }
+                    }
+                }
+
+                dragItem.style.left = x + 'px';
+                dragItem.style.top  = y + 'px';
+                dragItem.style.transform = 'translate(-50%, -50%)';
+
+                const px = ((x / rect.width)  * 100).toFixed(2);
+                const py = ((y / rect.height) * 100).toFixed(2);
+                document.getElementById('coord-x').innerText = px + '%';
+                document.getElementById('coord-y').innerText = py + '%';
+                document.getElementById('input-x').value = px;
+                document.getElementById('input-y').value = py;
+
+            } else if (activeDragElement === imgWrapper) {
+                const canvasW = container.clientWidth;
+                const canvasH = container.clientHeight;
+                
+                let x = elementStartX + deltaX;
+                let y = elementStartY + deltaY;
+
+                const wrapperW = imgWrapper.clientWidth;
+                const wrapperH = imgWrapper.clientHeight;
+
+                const canvasCenterX = canvasW / 2;
+                const canvasCenterY = canvasH / 2;
+                const wrapperCenterX = x + wrapperW / 2;
+                const wrapperCenterY = y + wrapperH / 2;
+
+                const threshold = 12; 
+                let snappedX = false;
+                let snappedY = false;
+
+                vGuide.classList.add('hidden');
+                hGuide.classList.add('hidden');
+
+                if (Math.abs(wrapperCenterX - canvasCenterX) < threshold) {
+                    x = canvasCenterX - wrapperW / 2;
+                    vGuide.style.left = canvasCenterX + 'px';
+                    vGuide.classList.remove('hidden');
+                    snappedX = true;
+                }
+                if (!snappedX) {
+                    if (Math.abs(x) < threshold) {
+                        x = 0;
+                        vGuide.style.left = '0px';
+                        vGuide.classList.remove('hidden');
+                    } else if (Math.abs(x + wrapperW - canvasW) < threshold) {
+                        x = canvasW - wrapperW;
+                        vGuide.style.left = canvasW + 'px';
+                        vGuide.classList.remove('hidden');
+                    }
+                }
+
+                if (Math.abs(wrapperCenterY - canvasCenterY) < threshold) {
+                    y = canvasCenterY - wrapperH / 2;
+                    hGuide.style.top = canvasCenterY + 'px';
+                    hGuide.classList.remove('hidden');
+                    snappedY = true;
+                }
+                if (!snappedY) {
+                    if (Math.abs(y) < threshold) {
+                        y = 0;
+                        hGuide.style.top = '0px';
+                        hGuide.classList.remove('hidden');
+                    } else if (Math.abs(y + wrapperH - canvasH) < threshold) {
+                        y = canvasH - wrapperH;
+                        hGuide.style.top = canvasH + 'px';
+                        hGuide.classList.remove('hidden');
+                    }
+                }
+
+                x = Math.max(-wrapperW / 2, Math.min(x, canvasW - wrapperW / 2));
+                y = Math.max(-wrapperH / 2, Math.min(y, canvasH - wrapperH / 2));
+
+                imgWrapper.style.left = x + 'px';
+                imgWrapper.style.top  = y + 'px';
+
+                imgXPercent = (x / canvasW) * 100;
+                imgYPercent = (y / canvasH) * 100;
+
+                document.getElementById('input-img-x').value = imgXPercent.toFixed(4);
+                document.getElementById('input-img-y').value = imgYPercent.toFixed(4);
+            }
+        });
+
+        let isFocused = false;
+
         document.addEventListener('click', (e) => {
             if (!dragItem.contains(e.target)) {
                 isFocused = false;
@@ -505,43 +942,39 @@
             }
         });
 
-        // Kontrol menggunakan tombol Arrow (Panah) keyboard
         document.addEventListener('keydown', (e) => {
             if (!isFocused) return;
 
             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-                e.preventDefault(); // Cegah halaman scroll saat memindahkan teks
+                e.preventDefault();
             } else {
                 return;
             }
 
-            const rect = container.getBoundingClientRect();
-            if (!rect.width || !rect.height) return;
+            const w = imgWrapper.clientWidth;
+            const h = imgWrapper.clientHeight;
+            if (!w || !h) return;
 
-            // Dapatkan posisi pixel saat ini
-            let leftPx = parseFloat(dragItem.style.left) || (rect.width / 2);
-            let topPx = parseFloat(dragItem.style.top) || (rect.height / 2);
+            let leftPx = parseFloat(dragItem.style.left) || (w / 2);
+            let topPx = parseFloat(dragItem.style.top) || (h / 2);
 
-            // Jarak perpindahan: 1px (tahan Shift untuk 10px agar lebih cepat)
             const step = e.shiftKey ? 10 : 1;
 
             if (e.key === 'ArrowLeft') {
                 leftPx = Math.max(0, leftPx - step);
             } else if (e.key === 'ArrowRight') {
-                leftPx = Math.min(rect.width, leftPx + step);
+                leftPx = Math.min(w, leftPx + step);
             } else if (e.key === 'ArrowUp') {
                 topPx = Math.max(0, topPx - step);
             } else if (e.key === 'ArrowDown') {
-                topPx = Math.min(rect.height, topPx + step);
+                topPx = Math.min(h, topPx + step);
             }
 
-            // Update posisi elemen
             dragItem.style.left = leftPx + 'px';
             dragItem.style.top  = topPx + 'px';
 
-            // Hitung ulang persentase koordinat
-            const px = ((leftPx / rect.width)  * 100).toFixed(2);
-            const py = ((topPx / rect.height) * 100).toFixed(2);
+            const px = ((leftPx / w)  * 100).toFixed(2);
+            const py = ((topPx / h) * 100).toFixed(2);
 
             document.getElementById('coord-x').innerText = px + '%';
             document.getElementById('coord-y').innerText = py + '%';
@@ -551,6 +984,9 @@
 
         document.addEventListener('mouseup', () => {
             isDragging = false;
+            isResizing = false;
+            activeDragElement = null;
+            activeHandle = null;
             vGuide.classList.add('hidden');
             hGuide.classList.add('hidden');
         });
@@ -560,7 +996,6 @@
             if (e.target.files.length > 0) {
                 lastCsvFile = e.target.files[0];
             } else if (lastCsvFile) {
-                // Kembalikan file sebelumnya jika dibatalkan (cancel)
                 const dataTransfer = new DataTransfer();
                 dataTransfer.items.add(lastCsvFile);
                 e.target.files = dataTransfer.files;
@@ -571,12 +1006,18 @@
 
             const file = lastCsvFile;
             if (!file) return;
+
+            const fileName = file.name.toLowerCase();
+            if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                parseExcel(file);
+                return;
+            }
+
             const reader = new FileReader();
             reader.onload = function(ev) {
                 const lines  = ev.target.result.split(/\r?\n/);
                 const skipWords = ['nama','name','no','no.','nomor','number'];
                 
-                // Deteksi delimiter
                 let delimiter = ',';
                 if (lines.length > 0) {
                     const firstLine = lines[0];
@@ -587,12 +1028,13 @@
                     }
                 }
 
+                let count = 0;
                 let longestName = '';
                 lines.forEach((line, idx) => {
                     const parts = line.split(delimiter);
                     const cell = parts[0] ? parts[0].trim() : '';
                     if (!cell) return;
-                    if (idx === 0 && skipWords.includes(cell.toLowerCase())) return; // skip header
+                    if (idx === 0 && skipWords.includes(cell.toLowerCase())) return; 
                     count++;
                     if (cell.length > longestName.length) {
                         longestName = cell;
@@ -626,7 +1068,6 @@
                     const workbook = XLSX.read(data, {type: 'array'});
                     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                     
-                    // Convert sheet ke array of arrays untuk mengambil Kolom A
                     const rows = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
                     const skipWords = ['nama','name','no','no.','nomor','number'];
                     let count = 0;
@@ -665,10 +1106,8 @@
 
         fontFamilySelect.addEventListener('change', updateFontFamilyPreview);
 
-
-        // ── Show loading overlay on form submit (AJAX) ───────────────────────
         document.getElementById('generate-form').addEventListener('submit', function(e) {
-            e.preventDefault(); // Hentikan submit standar
+            e.preventDefault(); 
 
             const form = e.target;
             const submitBtn = document.getElementById('submit-btn');
@@ -676,25 +1115,19 @@
             const progressPercentText = document.getElementById('progress-percent');
             const overlay = document.getElementById('loading-overlay');
 
-            // Reset progress bar
             progressFill.style.width = '0%';
             progressPercentText.innerText = '0%';
 
-            // Generate progress ID unik
             const progressId = 'prog_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
             document.getElementById('input-progress-id').value = progressId;
 
-            // Tampilkan loading overlay dan disable tombol submit
             overlay.classList.remove('hidden');
             submitBtn.disabled = true;
 
-            // Hapus cookie lama jika ada
             document.cookie = "download_started=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
 
-            // Persiapkan data form
             const formData = new FormData(form);
 
-            // Jalankan polling progress bar
             let pollInterval;
             const startPolling = () => {
                 pollInterval = setInterval(async () => {
@@ -717,7 +1150,6 @@
                 }, 800);
             };
 
-            // Kirim request generate via AJAX
             fetch(form.action, {
                 method: 'POST',
                 body: formData,
@@ -734,13 +1166,10 @@
             })
             .then(data => {
                 if (data.success && data.download_url) {
-                    // Pemicu download file ZIP
                     window.location.href = data.download_url;
 
-                    // Tunggu pendeteksian download dimulai via Cookie
                     const checkDownloadCookie = setInterval(() => {
                         if (document.cookie.split(';').some((item) => item.trim().startsWith('download_started='))) {
-                            // Tutup overlay, bersihkan cookie & interval
                             overlay.classList.add('hidden');
                             submitBtn.disabled = false;
                             document.cookie = "download_started=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
@@ -759,8 +1188,121 @@
                 alert('⚠️ Error: ' + error.message);
             });
 
-            // Mulai polling setelah submit terkirim
             startPolling();
         });
+
+        // Toggle PDF Paper options visibility
+        const formatRadios = document.querySelectorAll('input[name="format"]');
+        const pdfPaperOptions = document.getElementById('pdf-paper-options');
+        const usePaperRadios = document.querySelectorAll('input[name="use_paper"]');
+        const paperSizeContainer = document.getElementById('paper-size-container');
+        const fitModeRadios = document.querySelectorAll('input[name="fit_mode"]');
+        const imageScaleContainer = document.getElementById('image-scale-container');
+
+        function updatePdfOptionsVisibility() {
+            // Paper options are now available for all formats (PNG, JPG, PDF)
+            pdfPaperOptions.classList.remove('hidden');
+        }
+
+        function updatePaperSizeVisibility() {
+            let usePaperValue = 'n';
+            usePaperRadios.forEach(radio => {
+                if (radio.checked) usePaperValue = radio.value;
+            });
+
+            if (usePaperValue === 'y') {
+                paperSizeContainer.classList.remove('hidden');
+            } else {
+                paperSizeContainer.classList.add('hidden');
+            }
+        }
+
+        function updateMarginVisibility() {
+            let fitModeValue = 'full';
+            fitModeRadios.forEach(radio => {
+                if (radio.checked) fitModeValue = radio.value;
+            });
+
+            if (fitModeValue === 'smaller') {
+                imageScaleContainer.classList.remove('hidden');
+            } else {
+                imageScaleContainer.classList.add('hidden');
+            }
+        }
+
+        const paperSizeSelect = document.querySelector('select[name="paper_size"]');
+        const paperOrientationRadios = document.querySelectorAll('input[name="paper_orientation"]');
+        
+        function handlePaperSettingsChange() {
+            updateCanvasContainerSize();
+            updateImageLayerPositionAndSize();
+            updatePreview();
+        }
+
+        paperSizeSelect.addEventListener('change', handlePaperSettingsChange);
+        paperOrientationRadios.forEach(radio => {
+            radio.addEventListener('change', handlePaperSettingsChange);
+        });
+
+        formatRadios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                updatePdfOptionsVisibility();
+                handlePaperSettingsChange();
+            });
+        });
+
+        usePaperRadios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                updatePaperSizeVisibility();
+                handlePaperSettingsChange();
+            });
+        });
+
+        fitModeRadios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                updateMarginVisibility();
+                if (radio.value === 'smaller') {
+                    imgScaleSlider.value = 80;
+                    imgScaleVal.innerText = '80%';
+                    centerImageLayer();
+                }
+                handlePaperSettingsChange();
+            });
+        });
+
+        imgScaleSlider.addEventListener('input', () => {
+            imgScaleVal.innerText = imgScaleSlider.value + '%';
+            
+            const canvasW = container.clientWidth;
+            const canvasH = container.clientHeight;
+            if (canvasW && canvasH) {
+                const oldLeft = parseFloat(imgWrapper.style.left) || 0;
+                const oldTop = parseFloat(imgWrapper.style.top) || 0;
+                const oldWidth = parseFloat(imgWrapper.style.width) || 0;
+                const oldHeight = parseFloat(imgWrapper.style.height) || 0;
+                const centerX = oldLeft + oldWidth / 2;
+                const centerY = oldTop + oldHeight / 2;
+
+                updateImageLayerPositionAndSize();
+
+                const newWidth = parseFloat(imgWrapper.style.width) || 0;
+                const newHeight = parseFloat(imgWrapper.style.height) || 0;
+                const newLeft = centerX - newWidth / 2;
+                const newTop = centerY - newHeight / 2;
+
+                imgXPercent = (newLeft / canvasW) * 100;
+                imgYPercent = (newTop / canvasH) * 100;
+
+                updateImageLayerPositionAndSize();
+            } else {
+                updateImageLayerPositionAndSize();
+            }
+            updateFontPreview();
+        });
+
+        // Run once on load
+        updatePdfOptionsVisibility();
+        updatePaperSizeVisibility();
+        updateMarginVisibility();
     </script>
 </x-app-layout>

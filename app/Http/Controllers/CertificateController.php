@@ -22,17 +22,26 @@ class CertificateController extends Controller
         ini_set('memory_limit', '512M');
 
         $request->validate([
-            'template'         => 'required|image|mimes:png,jpg,jpeg,webp,gif,bmp',
-            'csv_file'         => 'required|file|mimes:csv,txt',
-            'x_pos'            => 'required|numeric',
-            'y_pos'            => 'required|numeric',
-            'format'           => 'required|in:png,jpg',
-            'font_scale'       => 'required|numeric|min:25|max:300',
-            'resolution_scale' => 'required|numeric|min:25|max:300',
-            'font_family'      => 'nullable|string',
-            'row_start'        => 'nullable|integer|min:1',
-            'row_end'          => 'nullable|integer|min:1',
-            'row_exclude'      => 'nullable|string',
+            'template'          => 'required|image|mimes:png,jpg,jpeg,webp,gif,bmp',
+            'csv_file'          => 'required|file|mimes:csv,txt',
+            'x_pos'             => 'required|numeric',
+            'y_pos'             => 'required|numeric',
+            'format'            => 'required|in:png,jpg,pdf',
+            'font_scale'        => 'required|numeric|min:25|max:300',
+            'resolution_scale'  => 'required|numeric|min:25|max:300',
+            'font_family'       => 'nullable|string',
+            'row_start'         => 'nullable|integer|min:1',
+            'row_end'           => 'nullable|integer|min:1',
+            'row_exclude'       => 'nullable|string',
+            'use_paper'         => 'nullable|string|in:y,n',
+            'paper_size'        => 'nullable|string|in:A4,F4',
+            'paper_orientation' => 'nullable|string|in:auto,L,P',
+            'fit_mode'          => 'nullable|string|in:full,smaller',
+            'margin'            => 'nullable|numeric|min:0|max:5',
+            'img_x'             => 'nullable|numeric',
+            'img_y'             => 'nullable|numeric',
+            'img_w'             => 'nullable|numeric',
+            'img_h'             => 'nullable|numeric',
         ]);
 
         $template = $request->file('template');
@@ -43,6 +52,15 @@ class CertificateController extends Controller
         $format           = $request->input('format', 'png');
         $fontScale        = (float) $request->input('font_scale', 100);
         $resolutionScale  = (float) $request->input('resolution_scale', 100);
+        $usePaper         = $request->input('use_paper') === 'y';
+        $paperSize        = $request->input('paper_size', 'A4');
+        $paperOrientation = $request->input('paper_orientation', 'auto');
+        $fitMode          = $request->input('fit_mode', 'full');
+        $marginCm         = (float) $request->input('margin', 1.0);
+        $imgX             = (float) $request->input('img_x', 0);
+        $imgY             = (float) $request->input('img_y', 0);
+        $imgW             = (float) $request->input('img_w', 100);
+        $imgH             = (float) $request->input('img_h', 100);
 
         $rowStart = $request->input('row_start') ? (int) $request->input('row_start') : null;
         $rowEnd   = $request->input('row_end') ? (int) $request->input('row_end') : null;
@@ -130,6 +148,24 @@ class CertificateController extends Controller
         $baseFontSize      = $this->calculateBaseFontSize($originalWidth);
         $requestedSize     = (int) round($baseFontSize * ($fontScale / 100));
         $outputWidth       = max(100, (int) round($originalWidth * ($resolutionScale / 100)));
+        $outputHeight      = max(100, (int) round($originalHeight * ($resolutionScale / 100)));
+
+        // Calculate paper page dimensions in pixels for JPG/PNG export
+        $resScale = $resolutionScale / 100;
+        $paperPixelsW = 1240 * $resScale;
+        $paperPixelsH = 1754 * $resScale;
+        if ($paperSize === 'F4') {
+            $paperPixelsH = 1950 * $resScale;
+        }
+        $paperDetectOrientation = $paperOrientation;
+        if ($paperDetectOrientation === 'auto') {
+            $paperDetectOrientation = $originalWidth > $originalHeight ? 'L' : 'P';
+        }
+        if ($paperDetectOrientation === 'L') {
+            $tmp = $paperPixelsW;
+            $paperPixelsW = $paperPixelsH;
+            $paperPixelsH = $tmp;
+        }
 
         // ─── Buat file ZIP di folder temp sistem ─────────────────────────────
         $zipName = 'sertifikat_' . time() . '.zip';
@@ -141,7 +177,7 @@ class CertificateController extends Controller
         if ($opened !== true) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal membuat file ZIP (kode error: ' . $opened . '). Pastikan folder temp bisa ditulis.'
+                'message' => 'Failed to create ZIP file (error code: ' . $opened . '). Make sure the temp folder is writable.'
             ], 500);
         }
 
@@ -173,8 +209,15 @@ class CertificateController extends Controller
                 $font->align('center', 'center');
             });
 
-            if ($resolutionScale !== 100.0) {
-                $image = $image->scale(width: $outputWidth);
+            if ($usePaper && in_array($paperSize, ['A4', 'F4']) && in_array($format, ['png', 'jpg'])) {
+                // Calculate size in pixels relative to the white paper canvas
+                $drawW = ($imgW / 100) * $paperPixelsW;
+                $drawH = ($imgH / 100) * $paperPixelsH;
+                $image = $image->resize(width: (int)$drawW, height: (int)$drawH);
+            } else {
+                if ($resolutionScale !== 100.0) {
+                    $image = $image->scale(width: $outputWidth);
+                }
             }
 
             // Nama file di dalam ZIP = nama dari CSV (karakter aneh dihapus, spasi dipertahankan)
@@ -186,12 +229,71 @@ class CertificateController extends Controller
                 $safeName = 'sertifikat_' . bin2hex(random_bytes(4));
             }
 
-            if ($format === 'jpg') {
+            if ($format === 'pdf') {
                 $encodedImage = $image->encodeUsingFileExtension('jpg');
-                $zip->addFromString($safeName . '.jpg', (string) $encodedImage);
+                
+                // Write image to a temporary file
+                $tempImgFile = tempnam(sys_get_temp_dir(), 'cert_img');
+                file_put_contents($tempImgFile, (string) $encodedImage);
+
+                if ($usePaper && in_array($paperSize, ['A4', 'F4'])) {
+                    // Page dimensions in mm: A4 is 210x297, F4 is 210x330.
+                    $w = 210;
+                    $h = ($paperSize === 'F4') ? 330 : 297;
+
+                    $orientation = $paperOrientation;
+                    if ($orientation === 'auto') {
+                        $orientation = $outputWidth > $outputHeight ? 'L' : 'P';
+                    }
+
+                    $pdf = new \FPDF($orientation, 'mm', [$w, $h]);
+                    $pdf->AddPage();
+
+                    $pageW = $pdf->w;
+                    $pageH = $pdf->h;
+
+                    if ($fitMode === 'smaller') {
+                        $drawW = ($imgW / 100) * $pageW;
+                        $drawH = ($imgH / 100) * $pageH;
+                        $posX  = ($imgX / 100) * $pageW;
+                        $posY  = ($imgY / 100) * $pageH;
+
+                        $pdf->Image($tempImgFile, $posX, $posY, $drawW, $drawH, 'jpg');
+                    } else {
+                        $pdf->Image($tempImgFile, 0, 0, $pageW, $pageH, 'jpg');
+                    }
+                } else {
+                    $orientation = $outputWidth > $outputHeight ? 'L' : 'P';
+                    // Create PDF matching the image dimensions
+                    $pdf = new \FPDF($orientation, 'pt', [$outputWidth, $outputHeight]);
+                    $pdf->AddPage();
+                    $pdf->Image($tempImgFile, 0, 0, $outputWidth, $outputHeight, 'jpg');
+                }
+
+                $pdfContent = $pdf->Output('S');
+
+                $zip->addFromString($safeName . '.pdf', $pdfContent);
+                unlink($tempImgFile);
             } else {
-                $encodedImage = $image->encodeUsingFileExtension('png');
-                $zip->addFromString($safeName . '.png', (string) $encodedImage);
+                if ($usePaper && in_array($paperSize, ['A4', 'F4'])) {
+                    // Position coordinates in pixels relative to the white paper canvas
+                    $posX = ($imgX / 100) * $paperPixelsW;
+                    $posY = ($imgY / 100) * $paperPixelsH;
+
+                    // Create white background paper canvas
+                    $paperCanvas = $manager->create(width: (int)$paperPixelsW, height: (int)$paperPixelsH);
+                    $paperCanvas->fill('#ffffff');
+
+                    // Overlay template image on canvas
+                    $paperCanvas->place(element: $image, position: 'top-left', offset_x: (int)$posX, offset_y: (int)$posY);
+
+                    $encodedImage = $paperCanvas->encodeUsingFileExtension($format);
+                    $zip->addFromString($safeName . '.' . $format, (string) $encodedImage);
+                    unset($paperCanvas);
+                } else {
+                    $encodedImage = $image->encodeUsingFileExtension($format);
+                    $zip->addFromString($safeName . '.' . $format, (string) $encodedImage);
+                }
             }
 
             // Simpan progress ke Cache
@@ -317,13 +419,19 @@ class CertificateController extends Controller
         int $imageWidth,
         int $imageHeight
     ): int {
-        $fontSize = max(8, $requestedSize);
+        $maxSize  = max(8, $requestedSize);
         $minSize  = max(8, (int) floor($requestedSize * 0.25));
 
-        while ($fontSize >= $minSize) {
-            $bbox = imagettfbbox($fontSize, 0, $fontPath, $text);
+        $low = $minSize;
+        $high = $maxSize;
+        $optimalSize = $minSize;
+
+        while ($low <= $high) {
+            $mid = (int) (($low + $high) / 2);
+            $bbox = imagettfbbox($mid, 0, $fontPath, $text);
             if ($bbox === false) {
-                return $fontSize;
+                $high = $mid - 1;
+                continue;
             }
 
             $textWidth  = abs($bbox[4] - $bbox[0]);
@@ -335,12 +443,13 @@ class CertificateController extends Controller
             $bottom = $anchorY + ($textHeight / 2);
 
             if ($left >= 0 && $right <= $imageWidth && $top >= 0 && $bottom <= $imageHeight) {
-                return $fontSize;
+                $optimalSize = $mid; // fits, record it and try larger size
+                $low = $mid + 1;
+            } else {
+                $high = $mid - 1; // does not fit, try smaller size
             }
-
-            $fontSize--;
         }
 
-        return $minSize;
+        return $optimalSize;
     }
 }
