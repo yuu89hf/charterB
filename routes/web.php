@@ -17,16 +17,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('dashboard');
 
     // Route untuk menampilkan halaman upload piagam
-    Route::get('/workspace', [CertificateController::class, 'index'])->name('certificate.index');
+    Route::get('/certificate', [CertificateController::class, 'index'])->name('certificate.index');
 
     // Route untuk memproses upload dan generate piagam
-    Route::post('/workspace/generate', [CertificateController::class, 'generate'])->name('certificate.generate');
+    Route::post('/certificate/generate', [CertificateController::class, 'generate'])->name('certificate.generate');
 
     // Route untuk melihat progress pembuatan sertifikat
-    Route::get('/workspace/progress/{progressId}', [CertificateController::class, 'progress'])->name('certificate.progress');
+    Route::get('/certificate/progress/{progressId}', [CertificateController::class, 'progress'])->name('certificate.progress');
 
     // Route untuk mengunduh berkas ZIP hasil generate
-    Route::get('/workspace/download/{file}', [CertificateController::class, 'download'])->name('certificate.download');
+    Route::get('/certificate/download/{file}', [CertificateController::class, 'download'])->name('certificate.download');
 });
 
 // Route untuk profile
