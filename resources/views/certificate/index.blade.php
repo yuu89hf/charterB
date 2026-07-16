@@ -135,8 +135,8 @@
                                 </div>
 
                                 <div class="mb-4">
-                                    <label class="block text-xs font-semibold text-gray-600 mb-2">1.2 Names Data (CSV)</label>
-                                    <input type="file" name="csv_file" id="csv-upload" accept=".csv,.txt" required
+                                    <label class="block text-xs font-semibold text-gray-600 mb-2">1.2 Names Data (CSV / Excel)</label>
+                                    <input type="file" name="csv_file" id="csv-upload" accept=".csv,.txt,.xlsx,.xls" required
                                         class="block w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3.5 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 cursor-pointer" />
                                     {{-- Preview info jumlah nama terdeteksi --}}
                                     <div id="csv-info" class="mt-2 text-xs text-gray-500 hidden">
@@ -570,6 +570,29 @@
 
             const file = lastCsvFile;
             if (!file) return;
+
+            const info = document.getElementById('csv-info');
+            const countEl = document.getElementById('csv-count');
+
+            // Cek ekstensi file
+            const extension = file.name.split('.').pop().toLowerCase();
+            if (extension === 'xlsx' || extension === 'xls') {
+                countEl.textContent = '⏳ Reading Excel file...';
+                info.classList.remove('hidden');
+
+                // Muat SheetJS (xlsx.full.min.js) secara dinamis jika belum terpasang
+                if (typeof XLSX === 'undefined') {
+                    const script = document.createElement('script');
+                    script.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+                    script.onload = () => parseExcel(file);
+                    document.head.appendChild(script);
+                } else {
+                    parseExcel(file);
+                }
+                return;
+            }
+
+            // File CSV / TXT biasa
             const reader = new FileReader();
             reader.onload = function(ev) {
                 const lines  = ev.target.result.split(/\r?\n/);
@@ -598,10 +621,9 @@
                         longestName = cell;
                     }
                 });
-                const info = document.getElementById('csv-info');
-                const countEl = document.getElementById('csv-count');
+
                 if (count > 0) {
-                    countEl.textContent = '✅ Detected ' + count + ' names in column A';
+                    countEl.textContent = '✅ Detected ' + count + ' names in Column A';
                     info.classList.remove('hidden');
                     document.getElementById('loading-count').textContent = 'Total: ' + count + ' certificates will be generated';
 
@@ -610,13 +632,58 @@
                         previewNameText.textContent = firstCsvName;
                     }
                 } else {
-                    countEl.textContent = '⚠️ No names detected in column A';
+                    countEl.textContent = '⚠️ No names detected in Column A';
                     info.classList.remove('hidden');
                 }
                 updateFontFamilyPreview();
             };
             reader.readAsText(file);
         });
+
+        function parseExcel(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    
+                    // Convert sheet ke array of arrays untuk mengambil Kolom A
+                    const rows = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
+                    const skipWords = ['nama','name','no','no.','nomor','number'];
+                    let count = 0;
+                    let longestName = '';
+
+                    rows.forEach((row, idx) => {
+                        const cell = row[0] ? String(row[0]).trim() : '';
+                        if (!cell) return;
+                        if (idx === 0 && skipWords.includes(cell.toLowerCase())) return;
+                        count++;
+                        if (cell.length > longestName.length) {
+                            longestName = cell;
+                        }
+                    });
+
+                    const info = document.getElementById('csv-info');
+                    const countEl = document.getElementById('csv-count');
+                    if (count > 0) {
+                        countEl.textContent = '✅ Detected ' + count + ' names in Column A';
+                        document.getElementById('loading-count').textContent = 'Total: ' + count + ' certificates will be generated';
+                        if (longestName) {
+                            firstCsvName = longestName;
+                            previewNameText.textContent = firstCsvName;
+                        }
+                    } else {
+                        countEl.textContent = '⚠️ No names detected in Column A';
+                    }
+                    updateFontFamilyPreview();
+                } catch (err) {
+                    console.error(err);
+                    document.getElementById('csv-count').textContent = '⚠️ Error reading Excel file';
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
 
         fontFamilySelect.addEventListener('change', updateFontFamilyPreview);
 

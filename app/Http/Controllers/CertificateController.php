@@ -7,6 +7,7 @@ use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
 use Illuminate\Support\Facades\Cookie;
 use ZipArchive;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class CertificateController extends Controller
 {
@@ -23,7 +24,7 @@ class CertificateController extends Controller
 
         $request->validate([
             'template'         => 'required|image|mimes:png,jpg,jpeg,webp,gif,bmp',
-            'csv_file'         => 'required|file|mimes:csv,txt',
+            'csv_file'         => 'required|file|mimes:csv,txt,xlsx,xls',
             'x_pos'            => 'required|numeric',
             'y_pos'            => 'required|numeric',
             'format'           => 'required|in:png,jpg',
@@ -54,32 +55,30 @@ class CertificateController extends Controller
             $excludeRows = array_map('intval', array_filter($excludeRows, 'strlen'));
         }
 
-        // ─── Baca CSV (Kolom A) ──────────────────────────────────────────────
+        // ─── Baca CSV / Excel (Kolom A) ──────────────────────────────────────
         // Auto-skip baris pertama jika isinya "nama", "name", atau "no" (header)
         $names = [];
-        if (($handle = fopen($csvFile->getRealPath(), 'r')) !== false) {
-            // Deteksi otomatis pembatas/separator (koma ',' atau titik koma ';')
-            // Hal ini penting karena Excel di Indonesia sering menyimpan CSV dengan separator ';'
-            $delimiter = ',';
-            $firstLine = fgets($handle);
-            if ($firstLine !== false) {
-                $commaCount = substr_count($firstLine, ',');
-                $semicolonCount = substr_count($firstLine, ';');
-                if ($semicolonCount > $commaCount) {
-                    $delimiter = ';';
-                }
-            }
-            rewind($handle);
-
+        try {
+            $spreadsheet = IOFactory::load($csvFile->getRealPath());
+            $worksheet = $spreadsheet->getActiveSheet();
+            $highestRow = $worksheet->getHighestRow();
+            
             $firstRow = true;
             $rowNum = 0;
-            while (($data = fgetcsv($handle, 0, $delimiter)) !== false) {
+            
+            for ($row = 1; $row <= $highestRow; $row++) {
                 $rowNum++;
-                if (!isset($data[0]) || trim($data[0]) === '') {
+                $cellValue = $worksheet->getCell([1, $row])->getValue();
+                
+                // Jika cell bertipe RichText, konversi ke string biasa
+                if ($cellValue instanceof \PhpOffice\PhpSpreadsheet\RichText\RichText) {
+                    $cellValue = $cellValue->getPlainText();
+                }
+                
+                $cellValue = trim((string) $cellValue);
+                if ($cellValue === '') {
                     continue;
                 }
-
-                $cellValue = trim($data[0]);
 
                 // Skip baris pertama jika berisi kata "nama", "name", atau "no"
                 if ($firstRow) {
@@ -107,11 +106,12 @@ class CertificateController extends Controller
 
                 $names[] = $cellValue;
             }
-            fclose($handle);
+        } catch (\Exception $e) {
+            return back()->withErrors(['csv_file' => 'Failed to read spreadsheet file: ' . $e->getMessage()]);
         }
 
         if (empty($names)) {
-            return back()->withErrors(['csv_file' => 'No names found in CSV matching the specified row range/exclusions.']);
+            return back()->withErrors(['csv_file' => 'No names found in CSV/Excel matching the specified row range/exclusions.']);
         }
 
         // ─── Setup Image Manager ─────────────────────────────────────────────
