@@ -22,13 +22,14 @@ class CertificateController extends Controller
         ini_set('memory_limit', '512M');
 
         $request->validate([
-            'template'   => 'required|image|mimes:png,jpg,jpeg,webp,gif,bmp',
-            'csv_file'   => 'required|file|mimes:csv,txt',
-            'x_pos'      => 'required|numeric',
-            'y_pos'      => 'required|numeric',
+            'template'         => 'required|image|mimes:png,jpg,jpeg,webp,gif,bmp',
+            'csv_file'         => 'required|file|mimes:csv,txt',
+            'x_pos'            => 'required|numeric',
+            'y_pos'            => 'required|numeric',
             'format'           => 'required|in:png,jpg',
             'font_scale'       => 'required|numeric|min:25|max:300',
             'resolution_scale' => 'required|numeric|min:25|max:300',
+            'font_family'      => 'nullable|string',
         ]);
 
         $template = $request->file('template');
@@ -94,10 +95,11 @@ class CertificateController extends Controller
         $x = (int) (($percentX / 100) * $originalWidth);
         $y = (int) (($percentY / 100) * $originalHeight);
 
-        $fontPath        = $this->resolveFontPath();
-        $baseFontSize    = $this->calculateBaseFontSize($originalWidth);
-        $requestedSize   = (int) round($baseFontSize * ($fontScale / 100));
-        $outputWidth     = max(100, (int) round($originalWidth * ($resolutionScale / 100)));
+        $defaultFontFamily = $request->input('font_family', 'Roboto-Bold');
+        $fontPath          = $this->resolveFontPathByName($defaultFontFamily);
+        $baseFontSize      = $this->calculateBaseFontSize($originalWidth);
+        $requestedSize     = (int) round($baseFontSize * ($fontScale / 100));
+        $outputWidth       = max(100, (int) round($originalWidth * ($resolutionScale / 100)));
 
         // ─── Buat file ZIP di folder temp sistem ─────────────────────────────
         $zipName = 'sertifikat_' . time() . '.zip';
@@ -204,6 +206,45 @@ class CertificateController extends Controller
         Cookie::queue('download_started', 'true', 1, '/', null, false, false);
 
         return response()->download($zipPath, $file)->deleteFileAfterSend(true);
+    }
+
+    private function resolveFontPathByName(string $fontName): string
+    {
+        $fontName = trim($fontName);
+        $map = [
+            'roboto' => 'Roboto-Bold.ttf',
+            'roboto-bold' => 'Roboto-Bold.ttf',
+            'montserrat' => 'Montserrat-Bold.ttf',
+            'montserrat-bold' => 'Montserrat-Bold.ttf',
+            'playfair' => 'PlayfairDisplay-Bold.ttf',
+            'playfair display' => 'PlayfairDisplay-Bold.ttf',
+            'playfairdisplay-bold' => 'PlayfairDisplay-Bold.ttf',
+            'alex brush' => 'AlexBrush-Regular.ttf',
+            'alexbrush' => 'AlexBrush-Regular.ttf',
+            'alexbrush-regular' => 'AlexBrush-Regular.ttf',
+            'cinzel' => 'Cinzel-Bold.ttf',
+            'cinzel-bold' => 'Cinzel-Bold.ttf',
+            'comic sans' => 'ComicSans.ttf',
+            'comic sans ms' => 'ComicSans.ttf',
+            'comic sans ms-bold' => 'ComicSans-Bold.ttf',
+            'comicsans' => 'ComicSans.ttf',
+            'times new roman' => 'TimesNewRoman.ttf',
+            'timesnewroman' => 'TimesNewRoman.ttf',
+            'times new roman-bold' => 'TimesNewRoman-Bold.ttf',
+            'tnr' => 'TimesNewRoman.ttf',
+            'arial' => 'Arial.ttf',
+            'arial-bold' => 'Arial-Bold.ttf',
+        ];
+
+        $key = strtolower($fontName);
+        $fileName = $map[$key] ?? 'Roboto-Bold.ttf';
+
+        $path = public_path("fonts/{$fileName}");
+        if (file_exists($path)) {
+            return $path;
+        }
+
+        return $this->resolveFontPath();
     }
 
     private function resolveFontPath(): string

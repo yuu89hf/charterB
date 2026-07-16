@@ -1,4 +1,46 @@
 <x-app-layout>
+    <style>
+        @font-face {
+            font-family: 'Roboto-Bold';
+            src: url('/fonts/Roboto-Bold.ttf') format('truetype');
+            font-weight: bold;
+        }
+        @font-face {
+            font-family: 'Montserrat-Bold';
+            src: url('/fonts/Montserrat-Bold.ttf') format('truetype');
+            font-weight: bold;
+        }
+        @font-face {
+            font-family: 'PlayfairDisplay-Bold';
+            src: url('/fonts/PlayfairDisplay-Bold.ttf') format('truetype');
+            font-weight: bold;
+        }
+        @font-face {
+            font-family: 'AlexBrush-Regular';
+            src: url('/fonts/AlexBrush-Regular.ttf') format('truetype');
+            font-weight: normal;
+        }
+        @font-face {
+            font-family: 'Cinzel-Bold';
+            src: url('/fonts/Cinzel-Bold.ttf') format('truetype');
+            font-weight: bold;
+        }
+        @font-face {
+            font-family: 'ComicSans';
+            src: url('/fonts/ComicSans.ttf') format('truetype');
+            font-weight: normal;
+        }
+        @font-face {
+            font-family: 'TimesNewRoman';
+            src: url('/fonts/TimesNewRoman.ttf') format('truetype');
+            font-weight: normal;
+        }
+        @font-face {
+            font-family: 'Arial';
+            src: url('/fonts/Arial.ttf') format('truetype');
+            font-weight: normal;
+        }
+    </style>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
             {{ __('Certificate Workspace') }}
@@ -110,6 +152,20 @@
                                 </div>
                             </div>
 
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Font Bawaan</label>
+                                <select name="font_family" id="font-family" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                                    <option value="Roboto-Bold" selected>Roboto (Modern Sans-Serif - Default)</option>
+                                    <option value="Montserrat-Bold">Montserrat (Sleek Sans-Serif)</option>
+                                    <option value="PlayfairDisplay-Bold">Playfair Display (Elegant Serif)</option>
+                                    <option value="AlexBrush-Regular">Alex Brush (Signature Script)</option>
+                                    <option value="Cinzel-Bold">Cinzel (Classic Serif)</option>
+                                    <option value="ComicSans">Comic Sans MS</option>
+                                    <option value="TimesNewRoman">Times New Roman</option>
+                                    <option value="Arial">Arial</option>
+                                </select>
+                            </div>
+
                             <hr class="my-6 border-gray-200">
 
                             <div class="mb-6">
@@ -199,10 +255,34 @@
         const resolutionScaleLabel = document.getElementById('resolution-scale-label');
         const resolutionInfo = document.getElementById('resolution-info');
         const previewNameText = document.getElementById('preview-name-text');
+        const fontFamilySelect = document.getElementById('font-family');
 
         let imageNaturalWidth = 0;
         let imageNaturalHeight = 0;
         let firstCsvName = 'Nama Penerima';
+
+        function getSelectedFontFamily() {
+            return fontFamilySelect.value;
+        }
+
+        function mapFontName(name) {
+            if (!name) return 'Roboto-Bold';
+            const clean = name.trim().toLowerCase();
+            if (clean.includes('roboto')) return 'Roboto-Bold';
+            if (clean.includes('montserrat')) return 'Montserrat-Bold';
+            if (clean.includes('playfair')) return 'PlayfairDisplay-Bold';
+            if (clean.includes('alex')) return 'AlexBrush-Regular';
+            if (clean.includes('cinzel')) return 'Cinzel-Bold';
+            if (clean.includes('comic') || clean.includes('sans')) return 'ComicSans';
+            if (clean.includes('times') || clean.includes('tnr')) return 'TimesNewRoman';
+            if (clean.includes('arial')) return 'Arial';
+            return 'Roboto-Bold'; // fallback
+        }
+
+        function updateFontFamilyPreview() {
+            const font = getSelectedFontFamily();
+            dragItem.style.fontFamily = font;
+        }
 
         function getResolutionScale() {
             return parseInt(resolutionScaleInput.value, 10) / 100;
@@ -252,6 +332,7 @@
         function updatePreview() {
             updateFontPreview();
             updateResolutionInfo();
+            updateFontFamilyPreview();
         }
 
         function positionTextAtCenter() {
@@ -334,8 +415,21 @@
                 const lines  = ev.target.result.split(/\r?\n/);
                 const skipWords = ['nama','name','no','no.','nomor','number'];
                 let count = 0;
+                
+                // Deteksi delimiter
+                let delimiter = ',';
+                if (lines.length > 0) {
+                    const firstLine = lines[0];
+                    const commaCount = (firstLine.match(/,/g) || []).length;
+                    const semicolonCount = (firstLine.match(/;/g) || []).length;
+                    if (semicolonCount > commaCount) {
+                        delimiter = ';';
+                    }
+                }
+
                 lines.forEach((line, idx) => {
-                    const cell = line.split(',')[0].trim();
+                    const parts = line.split(delimiter);
+                    const cell = parts[0] ? parts[0].trim() : '';
                     if (!cell) return;
                     if (idx === 0 && skipWords.includes(cell.toLowerCase())) return; // skip header
                     count++;
@@ -348,22 +442,27 @@
                     document.getElementById('loading-count').textContent = 'Total: ' + count + ' sertifikat akan di-generate';
 
                     const firstLine = lines.find((line, idx) => {
-                        const cell = line.split(',')[0].trim();
+                        const parts = line.split(delimiter);
+                        const cell = parts[0] ? parts[0].trim() : '';
                         if (!cell) return false;
                         if (idx === 0 && skipWords.includes(cell.toLowerCase())) return false;
                         return true;
                     });
                     if (firstLine) {
-                        firstCsvName = firstLine.split(',')[0].trim();
+                        const parts = firstLine.split(delimiter);
+                        firstCsvName = parts[0].trim();
                         previewNameText.textContent = firstCsvName;
                     }
                 } else {
                     countEl.textContent = '⚠️ Tidak ada nama terdeteksi di kolom A';
                     info.classList.remove('hidden');
                 }
+                updateFontFamilyPreview();
             };
             reader.readAsText(file);
         });
+
+        fontFamilySelect.addEventListener('change', updateFontFamilyPreview);
 
         // ── Show loading overlay on form submit (AJAX) ───────────────────────
         document.getElementById('generate-form').addEventListener('submit', function(e) {
