@@ -131,7 +131,7 @@
                                 <div class="mb-4">
                                     <label class="block text-xs font-semibold text-gray-600 mb-1">1.1 Template Upload</label>
                                     <span class="block text-[10px] text-gray-400 mb-1.5">Supported: PNG, JPG, JPEG, WebP</span>
-                                    <input type="file" name="template" id="image-upload" accept=".png,.jpg,.jpeg,.webp" required
+                                    <input type="file" name="template" id="image-upload" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" required
                                         class="block w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3.5 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" />
                                 </div>
 
@@ -419,24 +419,20 @@
 
             const file = lastTemplateFile;
             if (file) {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    previewImg.onload = function() {
-                        imageNaturalWidth = previewImg.naturalWidth;
-                        imageNaturalHeight = previewImg.naturalHeight;
-                        document.getElementById('canvas-container').classList.remove('hidden');
-                        document.getElementById('placeholder-text').classList.add('hidden');
-                        
-                        // Berikan jeda 50ms agar browser selesai melakukan layout/render
-                        // Sehingga clientWidth & getBoundingClientRect() tidak bernilai 0
-                        setTimeout(() => {
-                            positionTextAtCenter();
-                            updatePreview();
-                        }, 50);
-                    };
-                    previewImg.src = event.target.result;
+                // Hapus URL objek lama jika ada untuk mencegah memory leak
+                if (previewImg.src && previewImg.src.startsWith('blob:')) {
+                    URL.revokeObjectURL(previewImg.src);
+                }
+
+                previewImg.onload = function() {
+                    imageNaturalWidth = previewImg.naturalWidth;
+                    imageNaturalHeight = previewImg.naturalHeight;
+                    document.getElementById('canvas-container').classList.remove('hidden');
+                    document.getElementById('placeholder-text').classList.add('hidden');
+                    positionTextAtCenter();
+                    updatePreview();
                 };
-                reader.readAsDataURL(file);
+                previewImg.src = URL.createObjectURL(file);
             }
         });
 
@@ -821,14 +817,5 @@
             // Mulai polling setelah submit terkirim
             startPolling();
         });
-
-        // Pemicu otomatis jika file sudah terisi saat page load (misal setelah refresh halaman)
-        if (imgUpload.files && imgUpload.files.length > 0) {
-            imgUpload.dispatchEvent(new Event('change'));
-        }
-        const csvUploadEl = document.getElementById('csv-upload');
-        if (csvUploadEl && csvUploadEl.files && csvUploadEl.files.length > 0) {
-            csvUploadEl.dispatchEvent(new Event('change'));
-        }
     </script>
 </x-app-layout>
