@@ -1,9 +1,8 @@
-<h1 align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=28&duration=3000&pause=1000&color=3B82F6&center=true&vCenter=true&width=600&lines=charterB+%F0%9F%8E%93;Bulk+Certificate+Generator;Fast+%E2%80%A2+Flexible+%E2%80%A2+Pixel-Perfect" alt="charterB Typing SVG" />
-</h1>
+<h1 align="center">charterB 🎓</h1>
 
 <p align="center">
-  <strong>A clean, modern Laravel web app for bulk certificate generation — drag, drop, and download in seconds.</strong>
+  <strong>Bulk Certificate Generator — drag, drop, and download in seconds.</strong><br>
+  A clean, modern Laravel web app for generating personalized certificates at scale.
 </p>
 
 <p align="center">
@@ -22,41 +21,35 @@
 
 ## ✨ What is charterB?
 
-**charterB** is a lightweight yet powerful Laravel application that automates the tedious task of generating personalized certificates in bulk. Upload your template image, drop a CSV of recipient names, position the text with pixel-level precision on an interactive canvas, and download a ready-to-print ZIP file — all in your browser.
+**charterB** automates the tedious task of generating personalized certificates in bulk. Upload your template image, drop a CSV of recipient names, position the text with pixel-level precision on an interactive canvas — then download a ready-to-print ZIP file, all in your browser.
 
 ---
 
 ## 🚀 Features
 
 ### 📂 File & Data Input
-| Feature | Description |
-|---|---|
-| **Template Upload** | Accepts JPG, PNG, WebP, GIF, BMP certificate templates |
-| **CSV / Excel Support** | Upload `.csv`, `.txt`, `.xlsx`, `.xls` name lists |
-| **Smart CSV Parser** | Auto-detects `,` or `;` separators; skips common header rows (`Name`, `Nama`, `No`) |
-| **Longest Name Preview** | Automatically finds and previews the longest name so text never clips |
-| **Row Filtering** | Set start/end rows and exclude specific rows with precise control |
+- Upload certificate templates — JPG, PNG, WebP, GIF, BMP
+- Import recipient names from **CSV, TXT, XLSX, or XLS**
+- **Smart CSV Parser** — auto-detects `,` or `;` separator; skips header rows (`Name`, `Nama`, `No`)
+- **Longest Name Preview** — automatically previews the longest name so text never clips
+- **Row Filtering** — set start/end rows and exclude specific rows
 
 ### 🖊️ Text Positioning & Styling
-| Feature | Description |
-|---|---|
-| **Interactive Drag & Drop** | Drag the name label anywhere on the canvas |
-| **Keyboard Precision** | `↑↓←→` moves 1px; `Shift + Arrow` moves 10px |
-| **Smart Snap Guide (5%)** | Snaps to 5% coordinate intervals for easy centering; toggle on/off |
-| **Font Selection** | Choose from 8 fonts: Roboto, Montserrat, Playfair Display, Alex Brush, Cinzel, Comic Sans, Times New Roman, Arial |
-| **Auto Font Shrink** | Font automatically shrinks if text risks overflowing the template |
-| **Live Preview** | Font family, size, and position all update in real-time on the canvas |
+- **Interactive Drag & Drop** — drag the name label anywhere on the canvas
+- **Keyboard Precision** — `Arrow Keys` = 1px movement, `Shift + Arrow` = 10px movement
+- **Smart Snap Guide (5%)** — snaps to 5% coordinate intervals; toggleable
+- **8 Font Choices** — Roboto, Montserrat, Playfair Display, Alex Brush, Cinzel, Comic Sans, Times New Roman, Arial
+- **Auto Font Shrink** — text auto-scales down to prevent clipping
+- **Live Preview** — font family, size, and position update in real-time
 
 ### 📤 Export & Output
-| Feature | Description |
-|---|---|
-| **Output Formats** | PNG, JPG, or PDF per certificate |
-| **Resolution Scale** | 25% – 300% resolution scaling to control file size |
-| **Paper Size Mode** | Embed certificate on A4 or F4 white paper canvas |
-| **PDF Paper** | Generate print-ready PDFs with custom paper orientation (Auto/Portrait/Landscape) |
-| **Image Layout** | Full Page or Custom position within the paper canvas |
-| **Preserved Filenames** | ZIP files use the original recipient names (e.g. `Angel Leah.png`, not `Angel_Leah.png`) |
-| **AJAX Progress Bar** | Live progress % during ZIP generation for large batches |
+- Output formats: **PNG**, **JPG**, or **PDF** per certificate
+- **Resolution Scaling** — 25% – 300% to control output file size
+- **Paper Size Mode** — embed certificate on A4 or F4 white canvas
+- **PDF Orientation** — Auto / Portrait / Landscape
+- **Image Layout** — Full Page or Custom position within the paper canvas
+- **Preserved Filenames** — ZIP uses original recipient names (e.g. `Angel Leah.png`)
+- **AJAX Progress Bar** — live progress % for large batch generation
 
 ---
 
@@ -71,59 +64,31 @@
 ## ⚙️ Installation
 
 ```bash
-# 1. Clone the repository
 git clone https://github.com/yuu89hf/charterB.git
 cd charterB
 
-# 2. Install PHP dependencies
 composer install
-
-# 3. Install Node dependencies
 npm install
 
-# 4. Configure your environment
 cp .env.example .env
 php artisan key:generate
 
-# 5. Build front-end assets
 npm run build
-
-# 6. Start the development server
 php artisan serve
 ```
 
-> **Using Laragon?** Simply clone into your `www` directory and access the app at `http://charterB.test/`.
+> **Using Laragon?** Clone into your `www` directory and access at `http://charterB.test/`
 
 ---
 
 ## 💡 How to Use
 
-1. **Upload Template** — Drag or select your certificate image in the sidebar (JPG, PNG, WebP, etc.)
-2. **Upload CSV** — Select your recipient list. Names should be in **Column A**.
-3. **Position Name** — Drag the blue label on the canvas, or click it and use **Arrow Keys** for pixel-perfect placement.
-4. **Set Style** — Choose font, adjust font size with the slider.
-5. **Configure Export** — Select PNG / JPG / PDF, set resolution, optionally enable Paper Size mode.
-6. **Generate** — Click **Generate & Download ZIP** and watch the progress bar fill up!
-
----
-
-## 🗂️ Project Structure
-
-```
-charterB/
-├── app/
-│   └── Http/
-│       └── Controllers/
-│           └── CertificateController.php  # Core generation logic
-├── public/
-│   └── fonts/                             # TTF fonts used for rendering
-├── resources/
-│   └── views/
-│       └── certificate/
-│           └── index.blade.php            # Main interactive workspace UI
-└── routes/
-    └── web.php                            # Application routes
-```
+1. **Upload Template** — select your certificate image in the sidebar (JPG, PNG, WebP, etc.)
+2. **Upload CSV** — import your recipient list (names in **Column A**)
+3. **Position Name** — drag the blue label on the canvas, or use **Arrow Keys** for pixel-perfect placement
+4. **Set Style** — choose font and adjust size with the slider
+5. **Configure Export** — select PNG / JPG / PDF, set resolution, optionally enable Paper Size mode
+6. **Generate** — click **Generate & Download ZIP** and watch the progress bar fill up 🎉
 
 ---
 
