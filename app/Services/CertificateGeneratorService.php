@@ -30,7 +30,7 @@ class CertificateGeneratorService
             return false;
         }
 
-        $baseImage = $this->manager->read($templatePath);
+        $baseImage = $this->manager->decodePath($templatePath);
         $originalWidth = $baseImage->width();
         $originalHeight = $baseImage->height();
 
@@ -126,7 +126,7 @@ class CertificateGeneratorService
 
     private function exportPdf($zip, $image, $safeName, $outputWidth, $outputHeight, $config, $paperPixelsW, $paperPixelsH)
     {
-        $encodedImage = $image->encodeByExtension('jpg');
+        $encodedImage = $image->encodeUsingFileExtension('jpg');
         $tempImgFile = tempnam(sys_get_temp_dir(), 'cert_img');
         file_put_contents($tempImgFile, (string) $encodedImage);
 
@@ -165,15 +165,15 @@ class CertificateGeneratorService
             $posX = ($config['img_x'] / 100) * $paperPixelsW;
             $posY = ($config['img_y'] / 100) * $paperPixelsH;
 
-            $paperCanvas = $this->manager->create(width: (int)$paperPixelsW, height: (int)$paperPixelsH);
+            $paperCanvas = $this->manager->createImage(width: (int)$paperPixelsW, height: (int)$paperPixelsH);
             $paperCanvas->fill('#ffffff');
-            $paperCanvas->place(element: $image, position: 'top-left', offset_x: (int)$posX, offset_y: (int)$posY);
+            $paperCanvas->insert($image, (int)$posX, (int)$posY, \Intervention\Image\Alignment::TOP_LEFT);
 
-            $encodedImage = $paperCanvas->encodeByExtension($format);
+            $encodedImage = $paperCanvas->encodeUsingFileExtension($format);
             $zip->addFromString($safeName . '.' . $format, (string) $encodedImage);
             unset($paperCanvas);
         } else {
-            $encodedImage = $image->encodeByExtension($format);
+            $encodedImage = $image->encodeUsingFileExtension($format);
             $zip->addFromString($safeName . '.' . $format, (string) $encodedImage);
         }
     }

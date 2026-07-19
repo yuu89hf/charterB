@@ -77,6 +77,7 @@ function toggleSidebar() {
         let imageNaturalWidth = 0;
         let imageNaturalHeight = 0;
         let firstCsvName = 'Nama Penerima';
+        let excelToCsvBlob = null;
 
         function getSelectedFontFamily() {
             return fontFamilySelect.value;
@@ -834,6 +835,7 @@ function toggleSidebar() {
                 return;
             }
 
+            excelToCsvBlob = null; // reset on new upload
             const file = lastCsvFile;
             if (!file) return;
 
@@ -898,6 +900,10 @@ function toggleSidebar() {
                     const workbook = XLSX.read(data, {type: 'array'});
                     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                     
+                    // Convert to CSV for backend
+                    const csvString = XLSX.utils.sheet_to_csv(firstSheet);
+                    excelToCsvBlob = new Blob([csvString], { type: 'text/csv' });
+
                     const rows = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
                     const skipWords = ['nama','name','no','no.','nomor','number'];
                     let count = 0;
@@ -957,6 +963,9 @@ function toggleSidebar() {
             document.cookie = "download_started=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
 
             const formData = new FormData(form);
+            if (excelToCsvBlob) {
+                formData.set('csv_file', excelToCsvBlob, 'converted.csv');
+            }
 
             let pollInterval;
             const startPolling = () => {
