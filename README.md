@@ -1,8 +1,8 @@
-<h1 align="center">charterB 🎓</h1>
+<h1 align="center">CharterB 🎓</h1>
 
 <p align="center">
   <strong>Bulk Certificate Generator — drag, drop, and download in seconds.</strong><br>
-  A clean, modern Laravel web app for generating personalized certificates at scale.
+  A clean, modern Laravel web app for generating personalized certificates at scale, built with a premium UI and robust OOP architecture.
 </p>
 
 <p align="center">
@@ -19,9 +19,9 @@
 
 ---
 
-## ✨ What is charterB?
+## ✨ What is CharterB?
 
-**charterB** automates the tedious task of generating personalized certificates in bulk. Upload your template image, drop a CSV of recipient names, position the text with pixel-level precision on an interactive canvas — then download a ready-to-print ZIP file, all in your browser.
+**CharterB** automates the tedious task of generating personalized certificates in bulk. Upload your template image, drop a CSV of recipient names, position the text with pixel-level precision on an interactive canvas — then download a ready-to-print ZIP file, all securely processed in your browser and generated on a modular, Object-Oriented Laravel backend.
 
 ---
 
@@ -50,6 +50,15 @@
 - **Image Layout** — Full Page or Custom position within the paper canvas
 - **Preserved Filenames** — ZIP uses original recipient names (e.g. `Angel Leah.png`)
 - **AJAX Progress Bar** — live progress % for large batch generation
+
+---
+
+## 🏗️ Architecture & Code Quality
+
+CharterB is built using modern software design principles:
+- **Service-Oriented Backend**: Heavy generation logic is abstracted into dedicated single-responsibility classes (`CertificateGeneratorService`, `CsvParserService`, `WorkspaceExportService`).
+- **Form Requests**: All validation is handled securely via `GenerateWorkspaceRequest` to keep controllers thin.
+- **Componentized Frontend**: The entire workspace is built using modular Blade partials and a premium glassmorphism layout, fully decoupling the UI from monolithic files.
 
 ---
 
@@ -83,12 +92,13 @@ php artisan serve
 
 ## 💡 How to Use
 
-1. **Upload Template** — select your certificate image in the sidebar (JPG, PNG, WebP, etc.)
-2. **Upload CSV** — import your recipient list (names in **Column A**)
-3. **Position Name** — drag the blue label on the canvas, or use **Arrow Keys** for pixel-perfect placement
-4. **Set Style** — choose font and adjust size with the slider
-5. **Configure Export** — select PNG / JPG / PDF, set resolution, optionally enable Paper Size mode
-6. **Generate** — click **Generate & Download ZIP** and watch the progress bar fill up 🎉
+1. **Sign Up / Log In** — securely authenticate to access your workspace dashboard.
+2. **Upload Template** — select your certificate image in the sidebar (JPG, PNG, WebP, etc.)
+3. **Upload CSV** — import your recipient list (names in **Column A**)
+4. **Position Name** — drag the blue label on the canvas, or use **Arrow Keys** for pixel-perfect placement
+5. **Set Style** — choose font and adjust size with the slider
+6. **Configure Export** — select PNG / JPG / PDF, set resolution, optionally enable Paper Size mode
+7. **Generate** — click **Generate & Download ZIP** and watch the progress bar fill up 🎉
 
 ---
 
@@ -110,10 +120,11 @@ php artisan serve
 ## 🧑‍💻 Tech Stack
 
 - **Backend**: [Laravel 12](https://laravel.com/) (PHP 8.2+)
+- **Architecture**: Modular OOP (Services & Requests)
 - **Image Processing**: [Intervention Image v4](https://image.intervention.io/) with GD driver
 - **PDF Generation**: [FPDF](http://www.fpdf.org/)
-- **Frontend**: [TailwindCSS 3](https://tailwindcss.com/) + Vanilla JS + [Vite](https://vitejs.dev/)
-- **Excel Parsing**: [SheetJS (xlsx)](https://sheetjs.com/) (client-side)
+- **Frontend UI**: [TailwindCSS 3](https://tailwindcss.com/) + Glassmorphism Aesthetics
+- **Frontend Logic**: Vanilla JS + [Vite](https://vitejs.dev/) + [SheetJS (xlsx)](https://sheetjs.com/)
 
 ---
 
