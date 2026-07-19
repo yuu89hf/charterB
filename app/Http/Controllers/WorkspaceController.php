@@ -8,11 +8,11 @@ use Intervention\Image\Drivers\Gd\Driver;
 use Illuminate\Support\Facades\Cookie;
 use ZipArchive;
 
-class CertificateController extends Controller
+class WorkspaceController extends Controller
 {
     public function index()
     {
-        return view('certificate.index');
+        return view('workspace.index');
     }
 
     public function generate(Request $request)
@@ -315,7 +315,7 @@ class CertificateController extends Controller
 
         return response()->json([
             'success' => true,
-            'download_url' => route('certificate.download', ['file' => $zipName])
+            'download_url' => route('workspace.download', ['file' => $zipName])
         ]);
     }
 

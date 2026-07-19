@@ -21,8 +21,8 @@
         <div>
             <a href="/">
                 <!-- <x-application-logo class="w-20 h-20 fill-current text-gray-500" /> -->
-                <img src="{{ asset('images/logo.png') }}" alt="Certificate Preview"
-                    class="w-20 h-20 fill-current text-gray-500">
+                <img src="{{ asset('images/logo.png') }}" alt="CharterB Logo"
+                    class="w-20 h-20 object-contain drop-shadow-md">
             </a>
         </div>
 

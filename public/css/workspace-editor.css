@@ -1,0 +1,40 @@
+@font-face {
+            font-family: 'Roboto-Bold';
+            src: url('/fonts/Roboto-Bold.ttf') format('truetype');
+            font-weight: bold;
+        }
+        @font-face {
+            font-family: 'Montserrat-Bold';
+            src: url('/fonts/Montserrat-Bold.ttf') format('truetype');
+            font-weight: bold;
+        }
+        @font-face {
+            font-family: 'PlayfairDisplay-Bold';
+            src: url('/fonts/PlayfairDisplay-Bold.ttf') format('truetype');
+            font-weight: bold;
+        }
+        @font-face {
+            font-family: 'AlexBrush-Regular';
+            src: url('/fonts/AlexBrush-Regular.ttf') format('truetype');
+            font-weight: normal;
+        }
+        @font-face {
+            font-family: 'Cinzel-Bold';
+            src: url('/fonts/Cinzel-Bold.ttf') format('truetype');
+            font-weight: bold;
+        }
+        @font-face {
+            font-family: 'ComicSans';
+            src: url('/fonts/ComicSans.ttf') format('truetype');
+            font-weight: normal;
+        }
+        @font-face {
+            font-family: 'TimesNewRoman';
+            src: url('/fonts/TimesNewRoman.ttf') format('truetype');
+            font-weight: normal;
+        }
+        @font-face {
+            font-family: 'Arial';
+            src: url('/fonts/Arial.ttf') format('truetype');
+            font-weight: normal;
+        }

@@ -1,11 +1,11 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\CertificateController; // Nama controller diubah!
+use App\Http\Controllers\WorkspaceController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return redirect()->route('certificate.index');
+    return view('welcome');
 });
 
 // Hmph, perhatikan di sini! Kita satukan dashboard dan fitur piagam 
@@ -13,20 +13,20 @@ Route::get('/', function () {
 Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/dashboard', function() {
-        return redirect()->route('certificate.index');
+        return view('dashboard');
     })->name('dashboard');
 
     // Route untuk menampilkan halaman upload piagam
-    Route::get('/certificate', [CertificateController::class, 'index'])->name('certificate.index');
+    Route::get('/workspace', [WorkspaceController::class, 'index'])->name('workspace.index');
 
     // Route untuk memproses upload dan generate piagam
-    Route::post('/certificate/generate', [CertificateController::class, 'generate'])->name('certificate.generate');
+    Route::post('/workspace/generate', [WorkspaceController::class, 'generate'])->name('workspace.generate');
 
     // Route untuk melihat progress pembuatan sertifikat
-    Route::get('/certificate/progress/{progressId}', [CertificateController::class, 'progress'])->name('certificate.progress');
+    Route::get('/workspace/progress/{progressId}', [WorkspaceController::class, 'progress'])->name('workspace.progress');
 
     // Route untuk mengunduh berkas ZIP hasil generate
-    Route::get('/certificate/download/{file}', [CertificateController::class, 'download'])->name('certificate.download');
+    Route::get('/workspace/download/{file}', [WorkspaceController::class, 'download'])->name('workspace.download');
 });
 
 // Route untuk profile
